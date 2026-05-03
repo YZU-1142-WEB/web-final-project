@@ -1,7 +1,6 @@
 import os
 from datetime import datetime
-from flask import Flask, jsonify, request
-from flask_cors import CORS
+from flask import Flask, render_template, redirect, url_for, request, session, flash
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 
@@ -9,7 +8,7 @@ load_dotenv()
 
 app = Flask(__name__)
 
-CORS(app)
+app.secret_key = os.getenv("SECRET_KEY", "default_secret_key_for_dev")
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
     'DATABASE_URL', 'sqlite:///fishdb.sqlite')
@@ -26,43 +25,50 @@ class User(db.Model):
     password = db.Column(db.String(16), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    records = db.relationship('CatchRecord', backref='author', lazy=True)
 
-
-@app.route('/api/status', methods=['GET'])
-def get_status():
-    return jsonify({"status": "success", "message": "台灣常見魚種辨識系統 API 運作中！"})
-
-
-@app.route('/api/register', methods=['POST'])
+@app.route('/register', methods=['GET', 'POST'])
 def register():
-    data = request.json
-    username = data.get('username')
-    password = data.get('password')
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        existing_user = User.query.filter_by(username=username).first()
+        if existing_user is None:
+            new_user = User(username=username, password=password)
+            db.session.add(new_user)
+            db.session.commit()
+            flash("註冊成功，請登入！")
+            return redirect(url_for('login'))
+        flash("該帳號已存在！")
+    return render_template('register.html')
 
-    if User.query.filter_by(username=username).first():
-        return jsonify({"status": "error", "message": "帳號已存在"}), 400
-    new_user = User(username=username, password=password)
 
-    db.session.add(new_user)
-    db.session.commit()
-    return jsonify({"status": "success", "message": "註冊成功"})
-
-
-@app.route('/api/login', methods=['POST'])
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-    data = request.json
-    user = User.query.filter_by(username=data.get('username')).first()
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
 
-    if user and user.password == data.get('password'):
-        return jsonify({"status": "success", "message": "登入成功", "user_id": user.id})
+        user = User.query.filter_by(username=username).first()
 
-    return jsonify({"status": "error", "message": "帳號或密碼錯誤"}), 401
+        if user and user.password == password:
+            session['username'] = username
+            return redirect(url_for('dashboard'))
+
+        flash("帳號或密碼錯誤")
+    return render_template('login.html')
 
 
-@app.route('/api/upload', methods=['POST'])
-def upload_image():
-    pass
+@app.route('/dashboard')
+def dashboard():
+    if 'username' in session:
+        return render_template('dashboard.html')
+    return redirect(url_for('login'))
+
+
+@app.route('/logout')
+def logout():
+    session.pop('username', None)
+    return redirect(url_for('login'))
 
 
 if __name__ == '__main__':
@@ -70,5 +76,4 @@ if __name__ == '__main__':
         db.create_all()
         print("✅ 資料庫初始化完成！")
         print("✅ 上傳資料夾準備完畢！")
-
     app.run(port=8000, debug=True)

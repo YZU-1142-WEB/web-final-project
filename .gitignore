@@ -1,5 +1,11 @@
-text
-.env
 __pycache__/
 venv/
+.venv
+env/
+.env
+*.sqlite
+*.db
 *.pyc
+
+instance/
+upload/
