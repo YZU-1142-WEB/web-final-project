@@ -1,8 +1,5 @@
+text
+.env
 __pycache__/
 venv/
-.venv
-env/
-.env
-instance/
-*.sqlite
-*.db
+*.pyc
