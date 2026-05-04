@@ -1,0 +1,125 @@
+:root {
+	--primary-color: #5c67f2;
+	--secondary-color: #43e97b;
+	--text-dark: #333;
+}
+
+* {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+}
+
+body {
+	font-family: "Microsoft JhengHei", Arial, sans-serif;
+	background-image: url("../images/background.png");
+	background-size: cover;
+	background-position: center;
+	background-attachment: fixed;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	min-height: 100vh;
+	background-color: #e0f7fa;
+	padding: 2rem 0;
+}
+
+.container,
+.card {
+	background: rgba(255, 255, 255, 0.5);
+	backdrop-filter: blur(12px);
+	border-radius: 20px;
+	width: 90%;
+	max-width: 650px;
+	min-height: 800px;
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-start;
+	align-items: center;
+	padding: 2rem 4rem;
+	text-align: center;
+}
+
+.container h2 {
+	margin-top: 0.5rem;
+	margin-bottom: 8rem;
+	color: var(--text-dark);
+	font-size: 3rem;
+	letter-spacing: 10px;
+	text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+}
+
+.container h3 {
+	margin-top: 4rem;
+	color: var(--text-dark);
+	font-size: 1.5rem;
+	font-weight: normal;
+	letter-spacing: 2px;
+	text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+}
+
+form {
+	width: 100%;
+}
+
+.container input {
+	display: block;
+	width: 100%;
+	margin-bottom: 1.5rem;
+	padding: 1.2rem;
+	border: 1px solid #ddd;
+	border-radius: 10px;
+	font-size: 1.2rem;
+	background: rgba(255, 255, 255, 0.9);
+	transition: all 0.3s ease;
+}
+
+.container input:focus {
+	outline: none;
+	border-color: var(--primary-color);
+	box-shadow: 0 0 8px rgba(92, 103, 242, 0.2);
+}
+
+.container button {
+	width: 100%;
+	padding: 1.2rem;
+	background: linear-gradient(
+		135deg,
+		var(--primary-color) 0%,
+		var(--secondary-color) 100%
+	);
+	color: white;
+	border: none;
+	border-radius: 10px;
+	cursor: pointer;
+	font-size: 1.2rem;
+	font-weight: bold;
+	transition:
+		transform 0.2s,
+		opacity 0.2s;
+	margin-top: 1rem;
+}
+
+.container button:hover {
+	opacity: 0.9;
+	transform: translateY(-2px);
+}
+
+.footer-text {
+	margin-top: 5rem;
+	font-size: 1rem;
+	color: var(--text-dark);
+}
+
+@media (max-width: 600px) {
+	.container,
+	.card {
+		padding: 2rem 1.5rem;
+		min-height: auto;
+	}
+
+	.container h2 {
+		font-size: 2.2rem;
+		margin-bottom: 4rem;
+	}
+}

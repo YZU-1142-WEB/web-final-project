@@ -6,7 +6,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder="../frontend/templates",
+            static_folder="../frontend/static")
 
 app.secret_key = os.getenv("SECRET_KEY", "default_secret_key_for_dev")
 
@@ -26,7 +27,7 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
-@app.route('/register', methods=['GET', 'POST'])
+@app.route('/api/account/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
         username = request.form['username']
@@ -42,7 +43,7 @@ def register():
     return render_template('register.html')
 
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/api/account/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form['username']
@@ -58,16 +59,16 @@ def login():
     return render_template('login.html')
 
 
+@app.route('/api/account/logout')
+def logout():
+    session.pop('username', None)
+    return redirect(url_for('login'))
+
+
 @app.route('/dashboard')
 def dashboard():
     if 'username' in session:
         return render_template('dashboard.html')
-    return redirect(url_for('login'))
-
-
-@app.route('/logout')
-def logout():
-    session.pop('username', None)
     return redirect(url_for('login'))
 
 

@@ -1,19 +1,34 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-    <title>Login</title>
-    <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
-    <div class="container">
-        <h3>輕鬆又快速的釣魚紀錄小棧</h3>
-        <h2>混跡漁生</h2>
-        <form method="POST">
-            <input type="text" name="username" placeholder="帳號" required>
-            <input type="password" name="password" placeholder="密碼" required>
-            <button type="submit">登入</button>
-        </form>
-        <p class="footer-text">還沒有帳號？ <a href="/register">立即註冊</a></p>
-    </div>
-</body>
+	<head>
+		<title>Login</title>
+		<link
+			rel="stylesheet"
+			href="{{ url_for('static', filename='styles/main.css') }}"
+		/>
+	</head>
+	<body>
+		<div class="container">
+			<h3>輕鬆又快速的釣魚紀錄小棧</h3>
+			<h2>混跡漁生</h2>
+			<form method="POST">
+				<input
+					type="text"
+					name="username"
+					placeholder="帳號"
+					required
+				/>
+				<input
+					type="password"
+					name="password"
+					placeholder="密碼"
+					required
+				/>
+				<button type="submit">登入</button>
+			</form>
+			<p class="footer-text">
+				還沒有帳號？ <a href="{{url_for('register')}}">立即註冊</a>
+			</p>
+		</div>
+	</body>
 </html>
