@@ -27,6 +27,18 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
+@app.route('/')
+def index():
+    return redirect(url_for('login'))
+
+
+@app.route('/dashboard')
+def dashboard():
+    if 'username' in session:
+        return render_template('dashboard.html')
+    return redirect(url_for('login'))
+
+
 @app.route('/api/account/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -62,13 +74,6 @@ def login():
 @app.route('/api/account/logout')
 def logout():
     session.pop('username', None)
-    return redirect(url_for('login'))
-
-
-@app.route('/dashboard')
-def dashboard():
-    if 'username' in session:
-        return render_template('dashboard.html')
     return redirect(url_for('login'))
 
 
