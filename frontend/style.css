@@ -1,0 +1,56 @@
+body {
+    font-family: Arial, sans-serif;/* 設定字體族群：優先使用 Arial，若電腦沒安裝則自動切換為系統預設的無襯線字體 (sans-serif) */
+    display: flex;/* 啟動彈性盒子佈局 (Flexbox)：讓此容器內的子元素具備自動對齊與分配空間的能力 */
+    flex-direction: column;/* 設定彈性盒子的軸向：改為「垂直」堆疊（從上到下），預設通常是水平排列 */
+    align-items: center; /* 將所有元素居中對齊 */
+    gap: 20px; /* 在垂直堆疊的元素之間添加間距 */
+    padding: 30px;
+    background-color:rgb(255, 255, 255);
+}
+
+.container {
+    border: 2px solid gray; /* 模擬草圖的實線邊框 */
+    box-sizing: border-box; /* 確保邊框包含在寬度和高度內 */
+}
+
+/* 頂部大的空框 */
+#top-box {
+    width: 620px;
+    height: 350px;
+}
+
+/* 中間的輸入框 */
+#middle-input {
+    width: 600px;
+    height: 40px;
+    font-size: 16px;
+    padding: 10px;
+    border: 2px solid gray; /* 輸入框也需要邊框 */
+    
+}
+
+/* 中間容器 */
+#bottom-container {
+    width: 620px;
+    height: 60px;
+    display: flex;
+    justify-content: flex-end; /* 將按鈕推向右側 */
+    align-items: center; /* 垂直居中對齊 */
+    padding: 10px;
+}
+
+/* 按鈕 */
+#bottom-button {
+    padding: 6px 12px;
+    background-color: lightgray;
+    border: 1px solid gray;
+    border-radius: 3px;
+    cursor: pointer;
+}
+/* 潮汐圖表 */
+#tidal-chart {
+    width: 620px;
+    height: 200px;
+    background-color: rgb(255, 255, 255);
+    border-radius: 3px;
+}
