@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
-from flask import Flask, render_template, redirect, url_for, request, session, flash
+from flask import Flask, render_template, redirect, url_for, request, session, flash, jsonify
+from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 
@@ -10,6 +11,8 @@ app = Flask(__name__, template_folder="../frontend/templates",
             static_folder="../frontend/static")
 
 app.secret_key = os.getenv("SECRET_KEY", "default_secret_key_for_dev")
+
+CORS(app)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
     'DATABASE_URL', 'sqlite:///fishdb.sqlite')
@@ -39,6 +42,11 @@ def dashboard():
     return redirect(url_for('login'))
 
 
+@app.route('/api/status', methods=['GET'])
+def get_status():
+    return jsonify({"status": "success", "message": "台灣常見魚種辨識系統 API 運作中！"})
+
+
 @app.route('/api/account/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -60,7 +68,6 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-
         user = User.query.filter_by(username=username).first()
 
         if user and user.password == password:
@@ -75,6 +82,11 @@ def login():
 def logout():
     session.pop('username', None)
     return redirect(url_for('login'))
+
+
+@app.route('/api/upload', methods=['POST'])
+def upload_image():
+    pass
 
 
 if __name__ == '__main__':
