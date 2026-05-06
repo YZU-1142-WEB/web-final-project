@@ -1,29 +1,41 @@
-<!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-    <meta charset="UTF-8">
-    <title>註冊帳號</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    <div class="container">
-        <h2>註冊新帳號</h2>
-        
-        <!-- 顯示閃退訊息 (例如：帳號已存在) -->
-        {% with messages = get_flashed_messages() %}
-          {% if messages %}
-            {% for message in messages %}
-              <p style="color: red;">{{ message }}</p>
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
+	<!doctype html>
+  <html lang="zh-Hant">
+  <head>
+		<meta charset="UTF-8" />
+		<title>註冊帳號</title>
+		<link
+			rel="stylesheet"
+			href="{{ url_for('static', filename='styles/main.css') }}"
+		/>
+	</head>
+	<body>
+		<div class="container">
+			<h2>註冊新帳號</h2>
 
-        <form method="POST">
-            <input type="text" name="username" placeholder="請輸入帳號" required>
-            <input type="password" name="password" placeholder="請輸入密碼" required>
-            <button type="submit">立即註冊</button>
-        </form>
-        <p>已有帳號？ <a href="{{ url_for('login') }}">前往登入</a></p>
-    </div>
-</body>
+			<!-- 顯示閃退訊息 (例如：帳號已存在) -->
+			{% with messages = get_flashed_messages() %} {% if messages %} {%
+			for message in messages %}
+			<p style="color: red">{{ message }}</p>
+			{% endfor %} {% endif %} {% endwith %}
+
+			<form method="POST">
+				<input
+					type="text"
+					name="username"
+					placeholder="請輸入帳號"
+					required
+				/>
+				<input
+					type="password"
+					name="password"
+					placeholder="請輸入密碼"
+					required
+				/>
+				<button type="submit">立即註冊</button>
+			</form>
+			<p class="footer-text">
+				已有帳號？ <a href="{{ url_for('login') }}">前往登入</a>
+			</p>
+		</div>
+	</body>
 </html>
