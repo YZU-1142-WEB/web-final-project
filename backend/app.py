@@ -23,7 +23,6 @@ db = SQLAlchemy(app)
 
 class User(db.Model):
     __tablename__ = 'users'
-
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(20), unique=True, nullable=False)
     password = db.Column(db.String(16), nullable=False)
@@ -38,20 +37,32 @@ def index():
 @app.route('/dashboard')
 def dashboard():
     if 'username' in session:
-        return render_template('dashboard.html')
+        return render_template('dashboard.html', username=session['username'])
+    flash("請先登入")
     return redirect(url_for('login'))
 
 
-@app.route('/api/status', methods=['GET'])
-def get_status():
-    return jsonify({"status": "success", "message": "台灣常見魚種辨識系統 API 運作中！"})
+@app.route('/api/account/login', methods=['GET', 'POST'])
+def login():
+    if 'username' in session:
+        return redirect(url_for('dashboard'))
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        user = User.query.filter_by(username=username).first()
+        if user and user.password == password:
+            session['username'] = user.username
+            session['user_id'] = user.id
+            return redirect(url_for('dashboard'))
+        flash("帳號或密碼錯誤")
+    return render_template('login.html')
 
 
 @app.route('/api/account/register', methods=['GET', 'POST'])
-def register():
+def register_page():
     if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
+        username = request.form.get('username')
+        password = request.form.get('password')
         existing_user = User.query.filter_by(username=username).first()
         if existing_user is None:
             new_user = User(username=username, password=password)
@@ -63,25 +74,42 @@ def register():
     return render_template('register.html')
 
 
-@app.route('/api/account/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        user = User.query.filter_by(username=username).first()
-
-        if user and user.password == password:
-            session['username'] = username
-            return redirect(url_for('dashboard'))
-
-        flash("帳號或密碼錯誤")
-    return render_template('login.html')
-
-
 @app.route('/api/account/logout')
 def logout():
     session.pop('username', None)
+    session.pop('user_id', None)
+    flash("您已成功登出")
     return redirect(url_for('login'))
+
+
+@app.route('/api/status', methods=['GET'])
+def get_status():
+    return jsonify({"status": "success", "message": "台灣常見魚種辨識系統 API 運作中！"})
+
+
+@app.route('/api/register', methods=['POST'])
+def api_register():
+    data = request.json
+    username = data.get('username')
+    password = data.get('password')
+    if User.query.filter_by(username=username).first():
+        return jsonify({"status": "error", "message": "帳號已存在"}), 400
+    new_user = User(username=username, password=password)
+    db.session.add(new_user)
+    db.session.commit()
+    return jsonify({"status": "success", "message": "註冊成功"})
+
+
+@app.route('/api/login', methods=['POST'])
+def api_login():
+    data = request.json
+    user = User.query.filter_by(username=data.get('username')).first()
+    if user and user.password == data.get('password'):
+        session['username'] = user.username
+        session['user_id'] = user.id
+        return jsonify({"status": "success", "message": "登入成功", "user_id": user.id})
+
+    return jsonify({"status": "error", "message": "帳號或密碼錯誤"}), 401
 
 
 @app.route('/api/upload', methods=['POST'])
@@ -94,4 +122,5 @@ if __name__ == '__main__':
         db.create_all()
         print("✅ 資料庫初始化完成！")
         print("✅ 上傳資料夾準備完畢！")
+
     app.run(port=8000, debug=True)
