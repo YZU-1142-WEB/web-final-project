@@ -7,6 +7,7 @@ env/
 *.db
 *.pyc
 
+.vscode/
 /secrets/ 
 
 instance/
