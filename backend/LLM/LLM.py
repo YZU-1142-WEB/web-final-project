@@ -10,10 +10,10 @@ class GeminiService:
         api_key = os.getenv("Gemini_API_Key")
         if not api_key:
             print("警告：找不到 API Key")
-        
+
         genai.configure(api_key=api_key)
         self.model = genai.GenerativeModel(
-            model_name='gemini-2.0-flash-lite', # 修正為目前穩定版本
+            model_name='gemini-2.0-flash-lite',  # 修正為目前穩定版本
             system_instruction=(
                 "你是一位專業的台灣魚種專家，專門回答台灣魚類分布、習性、釣法等問題。\n"
                 "請遵守以下規則：\n"
@@ -31,6 +31,7 @@ class GeminiService:
             return {"success": True, "reply": response.text}
         except Exception as e:
             return {"success": False, "error": str(e)}
+
 
 # 初始化執行個體供外部直接使用
 llm_service = GeminiService()
