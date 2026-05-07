@@ -4,6 +4,7 @@ from flask import Flask, render_template, redirect, url_for, request, session, f
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
+from werkzeug.utils import secure_filename
 
 load_dotenv()
 
@@ -14,9 +15,14 @@ app.secret_key = os.getenv("SECRET_KEY", "default_secret_key_for_dev")
 
 CORS(app)
 
+UPLOAD_FOLDER = 'static/uploads'
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
     'DATABASE_URL', 'sqlite:///fishdb.sqlite')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 db = SQLAlchemy(app)
 
@@ -40,6 +46,11 @@ def dashboard():
         return render_template('dashboard.html', username=session['username'])
     flash("請先登入")
     return redirect(url_for('login'))
+
+
+@app.route('/api/status', methods=['GET'])
+def get_status():
+    return jsonify({"status": "success", "message": "台灣常見魚種辨識系統 API 運作中！"})
 
 
 @app.route('/api/account/login', methods=['GET', 'POST'])
@@ -82,11 +93,6 @@ def logout():
     return redirect(url_for('login'))
 
 
-@app.route('/api/status', methods=['GET'])
-def get_status():
-    return jsonify({"status": "success", "message": "台灣常見魚種辨識系統 API 運作中！"})
-
-
 @app.route('/api/register', methods=['POST'])
 def api_register():
     data = request.json
@@ -113,8 +119,43 @@ def api_login():
 
 
 @app.route('/api/upload', methods=['POST'])
-def upload_image():
-    pass
+def upload():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+
+    if 'file' not in request.files:
+        flash("未選取檔案")
+        return redirect(url_for('dashboard'))
+
+    file = request.files['file']
+    if file.filename == '':
+        flash("未選取檔案")
+        return redirect(url_for('dashboard'))
+
+    if file:
+        # 1. 儲存檔案
+        filename = secure_filename(file.filename)
+        # 建議加上時間戳記避免重複
+        filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
+
+        # 2. 丟給 AI (這裡先用模擬數據)
+        # ai_result = predict_fish_species(file_path)
+        ai_result = "吳郭魚 (AI 測試結果)"
+
+        # 3. 存入資料庫(需要改成 SQLAlchemy)
+#        mongo.db.fish_records.insert_one({
+#            'username': session['username'],
+#            'image_url': filename,
+#            'fish_type': ai_result,
+#            'upload_time': datetime.now()
+#       })
+
+        # 4. 直接渲染結果頁面
+        return render_template('result.html', filename=filename, fish_type=ai_result)
+
+    return redirect(url_for('dashboard'))
 
 
 if __name__ == '__main__':

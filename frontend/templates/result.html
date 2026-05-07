@@ -1,21 +1,44 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-    <title>辨識結果</title>
-    <style>
-        body { background-color: #e0f7fa; display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: sans-serif; }
-        .card { background: white; padding: 2rem; border-radius: 15px; text-align: center; }
-        img { max-width: 300px; border-radius: 10px; margin: 15px 0; border: 3px solid #00acc1; }
-        .fish-tag { font-size: 1.5rem; color: #d32f2f; font-weight: bold; }
-    </style>
-</head>
-<body>
-    <div class="card">
-        <h2>辨識完畢！</h2>
-        <img src="{{ url_for('static', filename='uploads/' + img_file) }}">
-        <p>這隻魚是：<span class="fish-tag">{{ fish_name }}</span></p>
-        <br>
-        <a href="/">回到主畫面</a>
-    </div>
-</body>
+	<head>
+		<title>辨識結果</title>
+		<style>
+			body {
+				background-color: #e0f7fa;
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				min-height: 100vh;
+				font-family: sans-serif;
+			}
+			.card {
+				background: white;
+				padding: 2rem;
+				border-radius: 15px;
+				text-align: center;
+			}
+			img {
+				max-width: 300px;
+				border-radius: 10px;
+				margin: 15px 0;
+				border: 3px solid #00acc1;
+			}
+			.fish-tag {
+				font-size: 1.5rem;
+				color: #d32f2f;
+				font-weight: bold;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="card">
+			<h2>辨識完畢！</h2>
+			<img
+				src="{{ url_for('static', filename='uploads/' + img_file) }}"
+			/>
+			<p>這隻魚是：<span class="fish-tag">{{ fish_name }}</span></p>
+			<br />
+			<a href="/">回到主畫面</a>
+		</div>
+	</body>
 </html>
