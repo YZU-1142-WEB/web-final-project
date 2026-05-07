@@ -6,6 +6,12 @@ from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
 
+#引入LLM 垃圾LLM 垃圾Gemini
+from LLM.LLM import llm_service
+
+#讀入垃圾AI的Key
+load_dotenv(".env")
+
 load_dotenv()
 
 app = Flask(__name__, template_folder="../frontend/templates",
@@ -47,6 +53,17 @@ def dashboard():
     flash("請先登入")
     return redirect(url_for('login'))
 
+#主頁
+@app.route('/home')
+def home():
+    # 檢查有沒有登入，有登入才給看 index.html
+    if 'username' in session:
+        return render_template('index.html', username=session['username'])
+    
+    # 沒登入的話，趕回登入頁面
+    flash("請先登入")
+    return redirect(url_for('login'))
+
 
 @app.route('/api/status', methods=['GET'])
 def get_status():
@@ -55,8 +72,8 @@ def get_status():
 
 @app.route('/api/account/login', methods=['GET', 'POST'])
 def login():
-    if 'username' in session:
-        return redirect(url_for('dashboard'))
+    if 'username' in session:#主頁
+        return redirect(url_for('home'))
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
@@ -64,7 +81,7 @@ def login():
         if user and user.password == password:
             session['username'] = user.username
             session['user_id'] = user.id
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('home'))
         flash("帳號或密碼錯誤")
     return render_template('login.html')
 
@@ -116,6 +133,32 @@ def api_login():
         return jsonify({"status": "success", "message": "登入成功", "user_id": user.id})
 
     return jsonify({"status": "error", "message": "帳號或密碼錯誤"}), 401
+
+@app.route('/api/LLM', methods=['POST'])
+def chat_endpoint():
+    # 檢查權限 (可選，如果你希望登入後才能用)
+    # if 'username' not in session:
+    #     return jsonify({"success": False, "error": "請先登入"}), 401
+
+    data = request.get_json()
+    user_message = data.get('message')
+
+    if not user_message:
+        return jsonify({"success": False, "error": "請提供問題"}), 400
+
+    # 呼叫剛才 import 進來的工具
+    result = llm_service.chat(user_message)
+
+    if result["success"]:
+        return jsonify({
+            "success": True,
+            "reply": result["reply"]
+        })
+    else:
+        return jsonify({
+            "success": False,
+            "error": result["error"]
+        }), 500
 
 
 @app.route('/api/upload', methods=['POST'])

@@ -1,33 +1,19 @@
-from flask import Flask, request, jsonify
 import os
 import json
-from flask_cors import CORS
 import google.generativeai as genai
 from dotenv import load_dotenv
-
-# 讀取環境變數 (結合隊友的設定方式)
-load_dotenv("API.env")
-
-app = Flask(__name__)
-CORS(app)
-
-# ---------------------------------------------------------
-# 1. 將你的服務包裝成類別，保留未來擴充性與 JSON 處理能力
-# ---------------------------------------------------------
 
 
 class GeminiService:
     def __init__(self):
-        # 取得金鑰
-        api_key = os.getenv("gemini_API_Key")
+        # 這裡從環境變數讀取 Key
+        api_key = os.getenv("Gemini_API_Key")
         if not api_key:
-            print("錯誤：找不到 API Key，請檢查 API.env 檔案設定")
-
+            print("警告：找不到 API Key")
+        
         genai.configure(api_key=api_key)
-
-        # 結合隊友的魚類專家 System Instruction
         self.model = genai.GenerativeModel(
-            model_name='gemini-2.5-flash-lite',
+            model_name='gemini-2.0-flash-lite', # 修正為目前穩定版本
             system_instruction=(
                 "你是一位專業的台灣魚種專家，專門回答台灣魚類分布、習性、釣法等問題。\n"
                 "請遵守以下規則：\n"
@@ -40,69 +26,11 @@ class GeminiService:
         )
 
     def chat(self, prompt: str):
-        """
-        處理一般對話請求
-        """
         try:
             response = self.model.generate_content(prompt)
             return {"success": True, "reply": response.text}
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    def analyze_image_tags(self, tags_data: dict):
-        """
-        保留你原先的 JSON 處理邏輯，未來可專門用來處理影像辨識傳來的標籤
-        """
-        generation_config = {
-            "temperature": 0.2,
-            "response_mime_type": "application/json",
-        }
-        prompt = f"請分析以下影像辨識標籤並以 JSON 格式給予魚種建議：{json.dumps(tags_data)}"
-
-        try:
-            response = self.model.generate_content(
-                prompt,
-                generation_config=generation_config
-            )
-            return {"success": True, "data": json.loads(response.text)}
-        except Exception as e:
-            return {"success": False, "error": str(e)}
-
-
-# 初始化 Gemini 服務
+# 初始化執行個體供外部直接使用
 llm_service = GeminiService()
-
-# ---------------------------------------------------------
-# 2. 保留隊友的 Flask 路由，作為前端呼叫的 API 接口
-# ---------------------------------------------------------
-
-
-@app.route('/api/LLM', methods=['POST'])
-def chat_endpoint():
-    data = request.get_json()
-    user_message = data.get('message')
-
-    if not user_message:
-        return jsonify({"success": False, "error": "請提供問題"}), 400
-
-    print(f"正在詢問 Gemini: {user_message}")
-
-    # 呼叫類別中的 chat 方法
-    result = llm_service.chat(user_message)
-
-    if result["success"]:
-        return jsonify({
-            "success": True,
-            "reply": result["reply"]
-        })
-    else:
-        print(f"Gemini 呼叫失敗: {result['error']}")
-        return jsonify({
-            "success": False,
-            "error": "模型思考中發生錯誤，請稍後再試。"
-        }), 500
-
-
-if __name__ == '__main__':
-    # 啟動 Flask 伺服器
-    app.run(port=3000, debug=True)

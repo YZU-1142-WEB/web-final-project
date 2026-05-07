@@ -16,8 +16,6 @@ def analyze_catch_image(image_path):
     接收圖片路徑，呼叫 Google Vision API，並回傳辨識到的標籤與信心指數。
     """
     # 1. 建立 Vision API 的客戶端
-    # 這裡很聰明：只要環境變數裡有 GOOGLE_APPLICATION_CREDENTIALS，
-    # ImageAnnotatorClient() 就會自動去那個路徑找到 JSON 金鑰並授權，不需要手動傳入參數。
     client = vision.ImageAnnotatorClient()
 
     # 2. 讀取實體圖片檔案

@@ -7,5 +7,7 @@ env/
 *.db
 *.pyc
 
+/secrets/ 
+
 instance/
 upload/
