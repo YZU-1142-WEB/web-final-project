@@ -15,7 +15,7 @@ app.secret_key = os.getenv("SECRET_KEY", "default_secret_key_for_dev")
 
 CORS(app)
 
-UPLOAD_FOLDER = 'static/uploads'
+UPLOAD_FOLDER = os.path.join(app.static_folder, 'uploads')
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
@@ -25,6 +25,8 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 db = SQLAlchemy(app)
+
+
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
@@ -32,19 +34,11 @@ class User(db.Model):
     password = db.Column(db.String(16), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-# 上傳照片跳轉頁面
-@app.route('/camera')
-def camera_page():
-    if 'username' in session:
-        return render_template('camera.html', username=session['username'])
-    flash("請先登入")
-    return redirect(url_for('login'))
 
 @app.route('/')
 def home():
     if 'username' in session:
         return render_template('index.html', username=session['username'])
-    #flash("請先登入")
     return redirect(url_for('login'))
 
 
@@ -53,9 +47,17 @@ def get_status():
     return jsonify({"status": "success", "message": "台灣常見魚種辨識系統 API 運作中！"})
 
 
+@app.route('/camera')
+def camera_page():
+    if 'username' in session:
+        return render_template('camera.html', username=session['username'])
+    flash("請先登入")
+    return redirect(url_for('login'))
+
+
 @app.route('/api/account/login', methods=['GET', 'POST'])
 def login():
-    if 'username' in session:  # 主頁
+    if 'username' in session:
         return redirect(url_for('home'))
     if request.method == 'POST':
         username = request.form.get('username')
@@ -93,30 +95,6 @@ def logout():
     return redirect(url_for('login'))
 
 
-@app.route('/api/register', methods=['POST'])
-def api_register():
-    data = request.json
-    username = data.get('username')
-    password = data.get('password')
-    if User.query.filter_by(username=username).first():
-        return jsonify({"status": "error", "message": "帳號已存在"}), 400
-    new_user = User(username=username, password=password)
-    db.session.add(new_user)
-    db.session.commit()
-    return jsonify({"status": "success", "message": "註冊成功"})
-
-
-@app.route('/api/login', methods=['POST'])
-def api_login():
-    data = request.json
-    user = User.query.filter_by(username=data.get('username')).first()
-    if user and user.password == data.get('password'):
-        session['username'] = user.username
-        session['user_id'] = user.id
-        return jsonify({"status": "success", "message": "登入成功", "user_id": user.id})
-    return jsonify({"status": "error", "message": "帳號或密碼錯誤"}), 401
-
-
 @app.route('/api/LLM', methods=['POST'])
 def chat_endpoint():
     if 'username' not in session:
@@ -146,7 +124,7 @@ def upload():
 
     if 'file' not in request.files:
         flash("未選取檔案")
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('camera_page'))
 
     file = request.files['file']
     if file.filename == '':
@@ -174,7 +152,7 @@ def upload():
 #       })
 
         # 4. 直接渲染結果頁面
-        return render_template('result.html', filename=filename, fish_type=ai_result)
+        return render_template('result.html', img_file=filename, fish_name=ai_result)
 
     return redirect(url_for('dashboard'))
 
