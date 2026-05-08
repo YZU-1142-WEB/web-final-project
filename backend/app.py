@@ -25,8 +25,6 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 db = SQLAlchemy(app)
-
-
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
@@ -34,25 +32,19 @@ class User(db.Model):
     password = db.Column(db.String(16), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-
-@app.route('/')
-def index():
-    return redirect(url_for('login'))
-
-
-@app.route('/dashboard')
-def dashboard():
+# 上傳照片跳轉頁面
+@app.route('/camera')
+def camera_page():
     if 'username' in session:
-        return render_template('dashboard.html', username=session['username'])
+        return render_template('camera.html', username=session['username'])
     flash("請先登入")
     return redirect(url_for('login'))
-
 
 @app.route('/')
 def home():
     if 'username' in session:
         return render_template('index.html', username=session['username'])
-    flash("請先登入")
+    #flash("請先登入")
     return redirect(url_for('login'))
 
 

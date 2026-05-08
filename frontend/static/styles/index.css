@@ -1,56 +1,155 @@
+:root {
+    --primary-blue: #3498db;
+    --dark-blue: #2980b9;
+    --bg-gray: #000000;
+    --border-color: #d1d8e0;
+    --text-color: #2f3640;
+}
+
 body {
-    font-family: Arial, sans-serif;/* 設定字體族群：優先使用 Arial，若電腦沒安裝則自動切換為系統預設的無襯線字體 (sans-serif) */
-    display: flex;/* 啟動彈性盒子佈局 (Flexbox)：讓此容器內的子元素具備自動對齊與分配空間的能力 */
-    flex-direction: column;/* 設定彈性盒子的軸向：改為「垂直」堆疊（從上到下），預設通常是水平排列 */
-    align-items: center; /* 將所有元素居中對齊 */
-    gap: 20px; /* 在垂直堆疊的元素之間添加間距 */
-    padding: 30px;
-    background-color:rgb(255, 255, 255);
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 25px;
+    padding: 40px;
+    background-color: var(--bg-gray); /* 改為淺灰色底，讓白色框更立體 */
+    color: var(--text-color);
 }
 
 .container {
-    border: 2px solid gray; /* 模擬草圖的實線邊框 */
-    box-sizing: border-box; /* 確保邊框包含在寬度和高度內 */
+    background-color: white;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05); /* 添加輕微陰影 */
+    border-radius: 8px; /* 增加圓角感 */
+    box-sizing: border-box;
 }
 
-/* 頂部大的空框 */
+/* 頂部大框 */
 #top-box {
-    width: 620px;
-    height: 350px;
+    width: 800px;
+    height: 500px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* 防止內容超出圓角 */
 }
 
-/* 中間的輸入框 */
+.top-content {
+    flex: 5;
+    background-color: #fff;
+}
+
+/* 頂部橫線與按鈕區域 */
+.top-actions {
+    flex: 1;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #fafbfc;
+}
+
+/* 針對跳轉連結的修飾 */
+.top-actions a {
+    text-decoration: none;  /* 移除任何可能的底線 */
+    display: flex;          /* 讓連結容器也支援 flex */
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;     /* 保持圓形外框，讓 hover 效果更乾淨 */
+}
+
+/* --- 精美 CSS 相機按鈕 --- */
+.camera-btn {
+    width: 60px;
+    height: 60px;
+    background-color: var(--primary-blue);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+}
+
+.camera-btn:hover {
+    background-color: var(--dark-blue);
+    transform: scale(1.1); /* 滑鼠經過放大 */
+}
+
+.camera-body {
+    width: 26px;
+    height: 18px;
+    background-color: white;
+    border-radius: 3px;
+    position: relative;
+}
+
+/* 相機上面的快門鈕凸起 */
+.camera-body::before {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 4px;
+    background-color: white;
+    top: -4px;
+    left: 4px;
+    border-radius: 2px 2px 0 0;
+}
+
+.camera-lens {
+    width: 10px;
+    height: 10px;
+    border: 2px solid var(--primary-blue);
+    border-radius: 50%;
+    background-color: white;
+    margin: 2px auto;
+}
+
+/* --- 其他元素美化 --- */
+
 #middle-input {
     width: 600px;
-    height: 40px;
+    height: 50px;
     font-size: 16px;
-    padding: 10px;
-    border: 2px solid gray; /* 輸入框也需要邊框 */
-    
+    padding: 0 20px;
+    border: 2px solid var(--border-color);
+    border-radius: 25px; /* 膠囊狀輸入框 */
+    outline: none;
+    transition: border-color 0.3s;
 }
 
-/* 中間容器 */
+#middle-input:focus {
+    border-color: var(--primary-blue); /* 點擊時變藍色 */
+}
+
 #bottom-container {
     width: 620px;
     height: 60px;
     display: flex;
-    justify-content: flex-end; /* 將按鈕推向右側 */
-    align-items: center; /* 垂直居中對齊 */
-    padding: 10px;
+    justify-content: flex-end;
+    align-items: center;
 }
 
-/* 按鈕 */
 #bottom-button {
-    padding: 6px 12px;
-    background-color: lightgray;
-    border: 1px solid gray;
-    border-radius: 3px;
+    padding: 10px 25px;
+    background-color: var(--primary-blue);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-weight: bold;
     cursor: pointer;
+    transition: background-color 0.3s;
 }
-/* 潮汐圖表 */
+
+#bottom-button:hover {
+    background-color: var(--dark-blue);
+}
+
 #tidal-chart {
     width: 620px;
     height: 200px;
-    background-color: rgb(255, 255, 255);
-    border-radius: 3px;
+    background: linear-gradient(180deg, #ffffff 0%, #e3f2fd 100%); /* 淡淡的藍色漸層 */
+    border: 1px solid var(--border-color);
 }
