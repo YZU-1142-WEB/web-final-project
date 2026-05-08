@@ -16,7 +16,7 @@ class GeminiService:
 
         # 使用新版的 Client 寫法初始化
         self.client = genai.Client(api_key=api_key)
-        self.model_name = 'gemini-2.0-flash-lite'
+        self.model_name = 'gemini-2.5-flash-lite'
 
         # 將設定存起來，稍後發送請求時會用到
         self.system_instruction = (
