@@ -107,12 +107,12 @@ def chat_endpoint():
 
     if result["success"]:
         return jsonify({
-            "status": True,
+            "success": True,
             "reply": result["reply"]
         })
     else:
         return jsonify({
-            "status": False,
+            "success": False,
             "error": result["error"]
         }), 500
 
@@ -129,7 +129,7 @@ def upload():
     file = request.files['file']
     if file.filename == '':
         flash("未選取檔案")
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('camera_page'))
 
     if file:
         # 1. 儲存檔案
