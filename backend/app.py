@@ -6,6 +6,9 @@ from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
 from LLM.LLM import llm_service
+import threading
+from image_identify.image_identify import Image_identify_service
+from ai_task import background_ai_task
 
 load_dotenv()
 
@@ -34,10 +37,15 @@ class User(db.Model):
     password = db.Column(db.String(16), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-
-@app.route('/')
-def index():
-    return redirect(url_for('login'))
+# === 新增這段：紀錄照片與處理狀態 ===
+class FishRecord(db.Model):
+    __tablename__ = 'fish_records'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(20), nullable=False)
+    image_url = db.Column(db.String(255), nullable=False)
+    status = db.Column(db.String(20), default='processing') # processing, completed, failed
+    fish_type = db.Column(db.String(100), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 @app.route('/dashboard')
@@ -48,11 +56,11 @@ def dashboard():
     return redirect(url_for('login'))
 
 
-@app.route('/home')
+@app.route('/')
 def home():
     if 'username' in session:
         return render_template('index.html', username=session['username'])
-    flash("請先登入")
+    #flash("請先登入")
     return redirect(url_for('login'))
 
 
@@ -147,44 +155,52 @@ def chat_endpoint():
         }), 500
 
 
-@app.route('/api/upload', methods=['POST'])
-def upload():
+
+#更新
+@app.route('/api/upload_async', methods=['POST'])
+def upload_async():
+    # 1. 檢查登入狀態 (因為是 API，所以回傳 JSON 錯誤，而不是 redirect)
     if 'username' not in session:
-        return redirect(url_for('login'))
+        return jsonify({"error": "請先登入"}), 401
 
     if 'file' not in request.files:
-        flash("未選取檔案")
-        return redirect(url_for('dashboard'))
+        return jsonify({"error": "未選取檔案"}), 400
 
     file = request.files['file']
     if file.filename == '':
-        flash("未選取檔案")
-        return redirect(url_for('dashboard'))
+        return jsonify({"error": "未選取檔案"}), 400
 
     if file:
-        # 1. 儲存檔案
+        # === 步驟 1. 儲存實體檔案 ===
         filename = secure_filename(file.filename)
-        # 建議加上時間戳記避免重複
         filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(file_path)
 
-        # 2. 丟給 AI (這裡先用模擬數據)
-        # ai_result = predict_fish_species(file_path)
-        ai_result = "吳郭魚 (AI 測試結果)"
+        # === 步驟 2. 建立「號碼牌」(取代舊的 MongoDB 寫法) ===
+        # 這裡的狀態設定為 'processing'，表示 AI 還沒算完
+        new_record = FishRecord(
+            username=session['username'],
+            image_url=filename,
+            status='processing'
+        )
+        db.session.add(new_record)
+        db.session.commit()
 
-        # 3. 存入資料庫(需要改成 SQLAlchemy)
-#        mongo.db.fish_records.insert_one({
-#            'username': session['username'],
-#            'image_url': filename,
-#            'fish_type': ai_result,
-#            'upload_time': datetime.now()
-#       })
+        # === 步驟 3. 召喚背景執行緒去跑 AI！ ===
+        # 把 app.app_context()、剛建好的紀錄 ID、照片路徑，丟給外面那個函數
+        thread = threading.Thread(
+            target=background_ai_task, 
+            args=(app.app_context(), new_record.id, file_path)
+        )
+        thread.start() # 叫背景開始跑，主程式不等待，繼續往下走
 
-        # 4. 直接渲染結果頁面
-        return render_template('result.html', filename=filename, fish_type=ai_result)
-
-    return redirect(url_for('dashboard'))
+        # === 步驟 4. 立刻回傳 JSON 給前端 ===
+        # 前端的 data.record_id 就會接到這個數字，然後開始每 2 秒輪詢
+        return jsonify({
+            "message": "照片已接收，AI 正在背景辨識中！",
+            "record_id": new_record.id
+        }), 202
 
 
 if __name__ == '__main__':

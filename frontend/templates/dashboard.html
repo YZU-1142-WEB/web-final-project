@@ -1,33 +1,98 @@
 <div class="card">
-	<h1>歡迎回來，{{ session['username'] }}！</h1>
+    <h1>恭喜上魚，{{ session['username'] }}！</h1>
 
-	<div
-		style="
-			margin: 20px 0;
-			border: 2px dashed #00acc1;
-			padding: 20px;
-			border-radius: 10px;
-		"
-	>
-		<h3>📸 上傳魚類照片</h3>
-		<form action="/upload" method="POST" enctype="multipart/form-data">
-			<input type="file" name="file" accept="image/*" required />
-			<br /><br />
-			<button
-				type="submit"
-				style="
-					background: #00acc1;
-					color: white;
-					border: none;
-					padding: 10px 20px;
-					border-radius: 5px;
-					cursor: pointer;
-				"
-			>
-				開始 AI 辨識
-			</button>
-		</form>
-	</div>
+    <div style="margin: 20px 0; border: 2px dashed #00acc1; padding: 20px; border-radius: 10px;">
+        <h3>📸 上傳魚類照片 </h3>
+        
+        
+        <input type="file" id="fileInput" accept="image/*" required />
+        <br /><br />
+        <button id="uploadBtn" onclick="uploadAndPoll()" 
+                style="background: #00acc1; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">
+            開始 AI 辨識
+        </button>
 
-	<a href="{{ url_for('logout') }}">登出</a>
+        
+        <div id="statusMessage" style="margin-top: 15px; font-weight: bold; color: #ff9800;"></div>
+    </div>
+    
+    <a href="{{ url_for('logout') }}">登出</a>
 </div>
+
+<!-- 負責非同步處理的 JavaScript -->
+<script>
+async function uploadAndPoll() {
+    const fileInput = document.getElementById('fileInput');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const statusMsg = document.getElementById('statusMessage');
+
+    if (!fileInput.files[0]) {
+        alert("請先選擇一張照片！");
+        return;
+    }
+
+    // 1. 打包照片包裹
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+
+    // 2. 鎖住按鈕，顯示上傳中
+    uploadBtn.disabled = true;
+    uploadBtn.style.background = "#ccc";
+    statusMsg.innerHTML = "正在上傳照片... ⏳";
+
+    try {
+        // 3. 把照片送給後端 (非同步發送)
+        const response = await fetch('/api/upload_async', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+
+        if (response.ok) {
+            statusMsg.innerHTML = "照片已上傳！AI 正在分析中... 🐟";
+            // 拿到號碼牌 (record_id)，開始定時查詢進度
+            startPolling(data.record_id);
+        } else {
+            statusMsg.innerHTML = `❌ 上傳失敗: ${data.error}`;
+            uploadBtn.disabled = false;
+        }
+    } catch (error) {
+        statusMsg.innerHTML = "❌ 網路連線錯誤";
+        uploadBtn.disabled = false;
+    }
+}
+
+// 這個函數負責「每 2 秒去問一次後端」
+function startPolling(recordId) {
+    const statusMsg = document.getElementById('statusMessage');
+    const uploadBtn = document.getElementById('uploadBtn');
+
+    const intervalId = setInterval(async () => {
+        try {
+            // 拿著號碼牌去查進度
+            const res = await fetch(`/api/check_status/${recordId}`);
+            const data = await res.json();
+
+            if (data.status === 'completed') {
+                clearInterval(intervalId); // 停止定時器
+                statusMsg.innerHTML = `🎉 辨識完成！<br><span style="color: green; font-size: 18px;">👉 ${data.fish_type}</span>`;
+                uploadBtn.disabled = false; // 解除按鈕鎖定
+                uploadBtn.style.background = "#00acc1";
+
+            } else if (data.status === 'failed') {
+                clearInterval(intervalId); // 停止定時器
+                statusMsg.innerHTML = `❌ 辨識失敗：${data.fish_type}`;
+                uploadBtn.disabled = false;
+                uploadBtn.style.background = "#00acc1";
+                
+            } else {
+                // 如果狀態還是 processing，就加一個點點點，讓畫面有動態感
+                statusMsg.innerHTML += " .";
+            }
+        } catch (err) {
+            console.error("查詢進度失敗", err);
+        }
+    }, 2000); // 2000 毫秒 = 每 2 秒查一次
+}
+</script>
