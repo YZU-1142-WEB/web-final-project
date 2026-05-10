@@ -1,5 +1,5 @@
 <div class="card">
-	<h1>恭喜上魚，{{ session['username'] }}！</h1>
+	<h1>歡迎回來，{{ session['username'] }}！</h1>
 
 	<div
 		style="
@@ -11,27 +11,35 @@
 	>
 		<h3>📸 上傳魚類照片</h3>
 
-		<input type="file" id="fileInput" accept="image/*" required />
-		<br /><br />
-		<button
-			id="uploadBtn"
-			onclick="uploadAndPoll()"
-			style="
-				background: #00acc1;
-				color: white;
-				border: none;
-				padding: 10px 20px;
-				border-radius: 5px;
-				cursor: pointer;
-			"
-		>
-			開始 AI 辨識
-		</button>
+		<form id="uploadForm">
+			<input
+				type="file"
+				id="fileInput"
+				name="file"
+				accept="image/*"
+				required
+			/>
+			<br /><br />
+			<button
+				type="button"
+				onclick="handleUpload()"
+				id="submitBtn"
+				style="
+					background: #00acc1;
+					color: white;
+					border: none;
+					padding: 10px 20px;
+					border-radius: 5px;
+					cursor: pointer;
+				"
+			>
+				開始 AI 辨識
+			</button>
+		</form>
 
-		<div
-			id="statusMessage"
-			style="margin-top: 15px; font-weight: bold; color: #ff9800"
-		></div>
+		<p id="statusText" style="display: none; color: #00acc1">
+			正在上傳並準備回首頁...
+		</p>
 	</div>
 
 	<a href="{{ url_for('logout') }}">登出</a>

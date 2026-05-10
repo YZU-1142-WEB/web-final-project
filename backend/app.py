@@ -9,6 +9,7 @@ from LLM.LLM import llm_service
 import threading
 from image_identify.image_identify import Image_identify_service
 from ai_task import background_ai_task
+import time
 
 load_dotenv()
 
@@ -57,6 +58,10 @@ def dashboard():
         return render_template('dashboard.html', username=session['username'])
     flash("請先登入")
     return redirect(url_for('login'))
+
+
+# 這裡先用全域變數 如果有空的話可以改為存進資料庫 (模擬存放 AI 辨識結果的資料庫 重啟後會消失)
+recognition_results = {}
 
 
 @app.route('/')
@@ -147,46 +152,72 @@ def chat_endpoint():
 def upload_async():
     # 1. 檢查登入狀態 (因為是 API，所以回傳 JSON 錯誤，而不是 redirect)
     if 'username' not in session:
-        return jsonify({"error": "請先登入"}), 401
+        return jsonify({"status": "error", "message": "請先登入"}), 401
 
     if 'file' not in request.files:
-        return jsonify({"error": "未選取檔案"}), 400
+        return jsonify({"status": "error", "message": "未接收到檔案"}), 400
 
     file = request.files['file']
     if file.filename == '':
-        return jsonify({"error": "未選取檔案"}), 400
+        return jsonify({"status": "error", "message": "未選取檔案"}), 400
 
     if file:
-        # === 步驟 1. 儲存實體檔案 ===
         filename = secure_filename(file.filename)
         filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(file_path)
 
-        # === 步驟 2. 建立「號碼牌」(取代舊的 MongoDB 寫法) ===
-        # 這裡的狀態設定為 'processing'，表示 AI 還沒算完
-        new_record = FishRecord(
-            username=session['username'],
-            image_url=filename,
-            status='processing'
-        )
-        db.session.add(new_record)
-        db.session.commit()
+        task_id = filename
+        recognition_results[task_id] = {"status": "processing"}
 
-        # === 步驟 3. 召喚背景執行緒去跑 AI！ ===
-        # 把 app.app_context()、剛建好的紀錄 ID、照片路徑，丟給外面那個函數
+        def ai_worker(tid, fname, path):
+            # 這裡模擬 AI 辨識需要 5 秒 (你可以換成真正的 ai_result = predict_fish_species(path))
+            time.sleep(5)
+            ai_result = "吳郭魚 (AI 辨識結果)"
+
+            # 更新結果字典
+            recognition_results[tid] = {
+                "status": "completed",
+                "img_file": fname,
+                "fish_name": ai_result
+            }
+            # (選填) 如果要存資料庫，也可以寫在這裡
+            # db.session.add(FishRecord(...))
+            # db.session.commit()
+
+        # 啟動 Thread 執行背景任務
         thread = threading.Thread(
-            target=background_ai_task,
-            args=(app.app_context(), new_record.id, file_path)
-        )
-        thread.start()  # 叫背景開始跑，主程式不等待，繼續往下走
+            target=ai_worker, args=(task_id, filename, file_path))
+        thread.start()
 
-        # === 步驟 4. 立刻回傳 JSON 給前端 ===
-        # 前端的 data.record_id 就會接到這個數字，然後開始每 2 秒輪詢
+        # --- 3. 關鍵改動：不渲染頁面，改回傳 JSON ---
         return jsonify({
-            "message": "照片已接收，AI 正在背景辨識中！",
-            "record_id": new_record.id
-        }), 202
+            "status": "success",
+            "task_id": task_id,
+            "message": "檔案已上傳，開始辨識"
+        })
+
+# --- 4. 配合用的路由：檢查進度 ---
+
+
+@app.route('/api/check_task/<task_id>')
+def check_task(task_id):
+    result = recognition_results.get(task_id, {"status": "not_found"})
+    return jsonify(result)
+
+# --- 5. 配合用的路由：顯示最終結果頁 ---
+
+
+@app.route('/result/<task_id>')
+def result_page(task_id):
+    result = recognition_results.get(task_id)
+    if not result or result['status'] != 'completed':
+        return redirect(url_for('home'))
+
+    # 這裡渲染你原本的 result.html
+    return render_template('result.html',
+                           img_file=result['img_file'],
+                           fish_name=result['fish_name'])
 
 
 if __name__ == '__main__':
