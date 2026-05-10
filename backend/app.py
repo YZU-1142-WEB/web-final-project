@@ -6,6 +6,8 @@ from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
 from LLM.LLM import llm_service
+import threading
+import time
 
 load_dotenv()
 
@@ -34,6 +36,8 @@ class User(db.Model):
     password = db.Column(db.String(16), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+#這裡先用全域變數 如果有空的話可以改為存進資料庫 (模擬存放 AI 辨識結果的資料庫 重啟後會消失)
+recognition_results = {}
 
 @app.route('/')
 def home():
@@ -53,7 +57,6 @@ def camera_page():
         return render_template('camera.html', username=session['username'])
     flash("請先登入")
     return redirect(url_for('login'))
-
 
 @app.route('/api/account/login', methods=['GET', 'POST'])
 def login():
@@ -120,41 +123,67 @@ def chat_endpoint():
 @app.route('/api/upload', methods=['POST'])
 def upload():
     if 'username' not in session:
-        return redirect(url_for('login'))
+        return jsonify({"status": "error", "message": "請先登入"}), 401
 
     if 'file' not in request.files:
-        flash("未選取檔案")
-        return redirect(url_for('camera_page'))
+        return jsonify({"status": "error", "message": "未接收到檔案"}), 400
 
     file = request.files['file']
     if file.filename == '':
-        flash("未選取檔案")
-        return redirect(url_for('camera_page'))
+        return jsonify({"status": "error", "message": "未選取檔案"}), 400
 
     if file:
-        # 1. 儲存檔案
         filename = secure_filename(file.filename)
-        # 建議加上時間戳記避免重複
         filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(file_path)
 
-        # 2. 丟給 AI (這裡先用模擬數據)
-        # ai_result = predict_fish_species(file_path)
-        ai_result = "吳郭魚 (AI 測試結果)"
+        task_id = filename 
+        recognition_results[task_id] = {"status": "processing"}
 
-        # 3. 存入資料庫(需要改成 SQLAlchemy)
-#        mongo.db.fish_records.insert_one({
-#            'username': session['username'],
-#            'image_url': filename,
-#            'fish_type': ai_result,
-#            'upload_time': datetime.now()
-#       })
+        def ai_worker(tid, fname, path):
+            # 這裡模擬 AI 辨識需要 5 秒 (你可以換成真正的 ai_result = predict_fish_species(path))
+            time.sleep(5) 
+            ai_result = "吳郭魚 (AI 辨識結果)"
+            
+            # 更新結果字典
+            recognition_results[tid] = {
+                "status": "completed",
+                "img_file": fname,
+                "fish_name": ai_result
+            }
+            # (選填) 如果要存資料庫，也可以寫在這裡
+            # db.session.add(FishRecord(...)) 
+            # db.session.commit()
 
-        # 4. 直接渲染結果頁面
-        return render_template('result.html', img_file=filename, fish_name=ai_result)
+        # 啟動 Thread 執行背景任務
+        thread = threading.Thread(target=ai_worker, args=(task_id, filename, file_path))
+        thread.start()
 
-    return redirect(url_for('dashboard'))
+        # --- 3. 關鍵改動：不渲染頁面，改回傳 JSON ---
+        return jsonify({
+            "status": "success",
+            "task_id": task_id,
+            "message": "檔案已上傳，開始辨識"
+        })
+
+# --- 4. 配合用的路由：檢查進度 ---
+@app.route('/api/check_task/<task_id>')
+def check_task(task_id):
+    result = recognition_results.get(task_id, {"status": "not_found"})
+    return jsonify(result)
+
+# --- 5. 配合用的路由：顯示最終結果頁 ---
+@app.route('/result/<task_id>')
+def result_page(task_id):
+    result = recognition_results.get(task_id)
+    if not result or result['status'] != 'completed':
+        return redirect(url_for('home'))
+    
+    # 這裡渲染你原本的 result.html
+    return render_template('result.html', 
+                           img_file=result['img_file'], 
+                           fish_name=result['fish_name'])
 
 
 if __name__ == '__main__':
