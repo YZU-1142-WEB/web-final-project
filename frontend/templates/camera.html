@@ -45,154 +45,92 @@
 	<a href="{{ url_for('logout') }}">登出</a>
 </div>
 
-<!-- 負責非同步處理的 JavaScript -->
 <script>
-	async function uploadAndPoll() {
-		const fileInput = document.getElementById("fileInput");
-		const uploadBtn = document.getElementById("uploadBtn");
-		const statusMsg = document.getElementById("statusMessage");
+    async function handleUpload() {
+        // 抓取畫面上的元素
+        const fileInput = document.getElementById("fileInput");
+        const btn = document.getElementById("submitBtn");
+        const statusText = document.getElementById("statusText");
 
-		if (!fileInput.files[0]) {
-			alert("請先選擇一張照片！");
-			return;
-		}
+        // 檢查使用者有沒有選擇檔案
+        if (!fileInput || fileInput.files.length === 0) {
+            alert('請先選擇一張照片！');
+            return;
+        }
 
-		// 1. 打包照片包裹
-		const formData = new FormData();
-		formData.append("file", fileInput.files[0]);
+        // 改變按鈕與文字狀態
+        const originalText = btn.innerText;
+        btn.innerText = '上傳中...';
+        btn.disabled = true;
+        statusText.style.display = "block"; // 顯示提示文字
+        statusText.innerText = "正在上傳照片... ⏳";
 
-		// 2. 鎖住按鈕，顯示上傳中
-		uploadBtn.disabled = true;
-		uploadBtn.style.background = "#ccc";
-		statusMsg.innerHTML = "正在上傳照片... ⏳";
+        // 打包檔案
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
 
-		try {
-			// 3. 把照片送給後端 (非同步發送)
-			const response = await fetch("/api/upload_async", {
-				method: "POST",
-				body: formData,
-			});
+        try {
+            // 呼叫 Flask 後端 API
+            const response = await fetch('/api/upload_async', {
+                method: 'POST',
+                body: formData
+            });
 
-			const data = await response.json();
+            const result = await response.json();
 
-			if (response.ok) {
-				statusMsg.innerHTML = "照片已上傳！AI 正在分析中... 🐟";
-				// 拿到號碼牌 (record_id)，開始定時查詢進度
-				startPolling(data.record_id);
-			} else {
-				statusMsg.innerHTML = `❌ 上傳失敗: ${data.error}`;
-				uploadBtn.disabled = false;
-			}
-		} catch (error) {
-			statusMsg.innerHTML = "❌ 網路連線錯誤";
-			uploadBtn.disabled = false;
-		}
-	}
+            // 如果後端成功接收，開始等待 AI 辨識
+            if (result.status === 'success') {
+                btn.innerText = 'AI 辨識中...';
+                statusText.innerText = "照片已上傳！AI 正在分析中... 🐟";
+                const taskId = result.task_id;
+                
+                // 啟動輪詢檢查
+                checkTaskStatus(taskId, btn, originalText, statusText);
+            } else {
+                alert("錯誤：" + result.message);
+                btn.innerText = originalText;
+                btn.disabled = false;
+                statusText.style.display = "none";
+            }
 
-	// 這個函數負責「每 2 秒去問一次後端」
-	function startPolling(recordId) {
-		const statusMsg = document.getElementById("statusMessage");
-		const uploadBtn = document.getElementById("uploadBtn");
+        } catch (error) {
+            console.error("上傳發生錯誤:", error);
+            alert("無法連線到伺服器，請確認後端有啟動！");
+            btn.innerText = originalText;
+            btn.disabled = false;
+            statusText.style.display = "none";
+        }
+    }
 
-		const intervalId = setInterval(async () => {
-			try {
-				// 拿著號碼牌去查進度
-				const res = await fetch(`/api/check_status/${recordId}`);
-				const data = await res.json();
+    // 這個函數會一直去問後端：「好了沒？」
+    async function checkTaskStatus(taskId, btn, originalText, statusText) {
+        try {
+            const response = await fetch(`/api/check_task/${taskId}`);
+            const data = await response.json();
 
-				if (data.status === "completed") {
-					clearInterval(intervalId); // 停止定時器
-					statusMsg.innerHTML = `🎉 辨識完成！<br><span style="color: green; font-size: 18px;">👉 ${data.fish_type}</span>`;
-					uploadBtn.disabled = false; // 解除按鈕鎖定
-					uploadBtn.style.background = "#00acc1";
-				} else if (data.status === "failed") {
-					clearInterval(intervalId); // 停止定時器
-					statusMsg.innerHTML = `❌ 辨識失敗：${data.fish_type}`;
-					uploadBtn.disabled = false;
-					uploadBtn.style.background = "#00acc1";
-				} else {
-					// 如果狀態還是 processing，就加一個點點點，讓畫面有動態感
-					statusMsg.innerHTML += " .";
-				}
-			} catch (err) {
-				console.error("查詢進度失敗", err);
-			}
-		}, 2000); // 2000 毫秒 = 每 2 秒查一次
-	}
-</script>
-
-<!-- 負責非同步處理的 JavaScript -->
-<script>
-	async function uploadAndPoll() {
-		const fileInput = document.getElementById("fileInput");
-		const uploadBtn = document.getElementById("uploadBtn");
-		const statusMsg = document.getElementById("statusMessage");
-
-		if (!fileInput.files[0]) {
-			alert("請先選擇一張照片！");
-			return;
-		}
-
-		// 1. 打包照片包裹
-		const formData = new FormData();
-		formData.append("file", fileInput.files[0]);
-
-		// 2. 鎖住按鈕，顯示上傳中
-		uploadBtn.disabled = true;
-		uploadBtn.style.background = "#ccc";
-		statusMsg.innerHTML = "正在上傳照片... ⏳";
-
-		try {
-			// 3. 把照片送給後端 (非同步發送)
-			const response = await fetch("/api/upload_async", {
-				method: "POST",
-				body: formData,
-			});
-
-			const data = await response.json();
-
-			if (response.ok) {
-				statusMsg.innerHTML = "照片已上傳！AI 正在分析中... 🐟";
-				// 拿到號碼牌 (record_id)，開始定時查詢進度
-				startPolling(data.record_id);
-			} else {
-				statusMsg.innerHTML = `❌ 上傳失敗: ${data.error}`;
-				uploadBtn.disabled = false;
-			}
-		} catch (error) {
-			statusMsg.innerHTML = "❌ 網路連線錯誤";
-			uploadBtn.disabled = false;
-		}
-	}
-
-	// 這個函數負責「每 2 秒去問一次後端」
-	function startPolling(recordId) {
-		const statusMsg = document.getElementById("statusMessage");
-		const uploadBtn = document.getElementById("uploadBtn");
-
-		const intervalId = setInterval(async () => {
-			try {
-				// 拿著號碼牌去查進度
-				const res = await fetch(`/api/check_status/${recordId}`);
-				const data = await res.json();
-
-				if (data.status === "completed") {
-					clearInterval(intervalId); // 停止定時器
-					statusMsg.innerHTML = `🎉 辨識完成！<br><span style="color: green; font-size: 18px;">👉 ${data.fish_type}</span>`;
-					uploadBtn.disabled = false; // 解除按鈕鎖定
-					uploadBtn.style.background = "#00acc1";
-				} else if (data.status === "failed") {
-					clearInterval(intervalId); // 停止定時器
-					statusMsg.innerHTML = `❌ 辨識失敗：${data.fish_type}`;
-					uploadBtn.disabled = false;
-					uploadBtn.style.background = "#00acc1";
-				} else {
-					// 如果狀態還是 processing，就加一個點點點，讓畫面有動態感
-					statusMsg.innerHTML += " .";
-				}
-			} catch (err) {
-				console.error("查詢進度失敗", err);
-			}
-		}, 2000); // 2000 毫秒 = 每 2 秒查一次
-	}
+            if (data.status === 'completed') {
+                // 🎉 辨識成功！自動跳轉到結果頁面
+                statusText.innerText = "🎉 辨識完成！準備跳轉...";
+                window.location.href = `/result/${taskId}`;
+                
+            } else if (data.status === 'failed') {
+                // ❌ 辨識失敗
+                alert("辨識失敗：" + data.error_message);
+                btn.innerText = originalText;
+                btn.disabled = false;
+                statusText.style.display = "none";
+                
+            } else {
+                // ⏳ 還在處理中 (processing)，加個點點點讓畫面有動態感
+                statusText.innerText += " .";
+                // 等 1 秒後再問一次
+                setTimeout(() => checkTaskStatus(taskId, btn, originalText, statusText), 1000);
+            }
+        } catch (error) {
+            console.error("檢查狀態失敗:", error);
+            btn.innerText = originalText;
+            btn.disabled = false;
+            statusText.style.display = "none";
+        }
+    }
 </script>

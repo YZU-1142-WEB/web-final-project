@@ -150,7 +150,7 @@ def chat_endpoint():
 # 更新
 @app.route('/api/upload_async', methods=['POST'])
 def upload_async():
-    # 1. 檢查登入狀態 (因為是 API，所以回傳 JSON 錯誤，而不是 redirect)
+    # 1. 檢查登入狀態
     if 'username' not in session:
         return jsonify({"status": "error", "message": "請先登入"}), 401
 
@@ -170,35 +170,43 @@ def upload_async():
         task_id = filename
         recognition_results[task_id] = {"status": "processing"}
 
+        # --- 2. 定義背景工作 (注意縮排要包在 if file: 裡面) ---
         def ai_worker(tid, fname, path):
             try:
-                # 1. 真正呼叫你的 Google Vision API 辨識函式
-                # 這會回傳一個 List，例如: [{"name": "Fish", "score": 0.98}, ...]
+                # 呼叫剛剛寫好的辨識函式
                 predictions = analyze_catch_image(path)
                 
-                # 2. 整理辨識結果
                 if predictions:
-                    # 抓取信心指數最高的第一個結果當作主要顯示名稱
+                    # 取得信心指數最高的結果
                     best_match = predictions[0]
-                    ai_result = f"{best_match['name']} (信心指數: {best_match['score']*100:.1f}%)"
+                    ai_result = f"{best_match['name']} (信心度: {best_match['score']*100:.1f}%)"
                 else:
-                    ai_result = "無法辨識出任何魚類特徵"
+                    ai_result = "圖片中未偵測到明顯魚類"
 
-                # 3. 更新結果字典 (狀態改為 completed)
                 recognition_results[tid] = {
                     "status": "completed",
                     "img_file": fname,
                     "fish_name": ai_result,
-                    "all_predictions": predictions # 把完整清單也存下來，以後可能用得到
+                    "all_predictions": predictions
                 }
-
             except Exception as e:
-                # 4. 錯誤處理：如果 GCP 沒設定好或發生網路錯誤，更新狀態為 failed
-                print(f"背景辨識發生錯誤 (Task ID: {tid}): {e}")
+                print(f"❌ 背景辨識錯誤: {e}")
                 recognition_results[tid] = {
                     "status": "failed",
                     "error_message": str(e)
                 }
+
+        # --- 3. 剛剛不小心被刪掉的關鍵啟動區塊 ---
+        # 啟動 Thread 讓辨識在背景執行，不卡死主程式
+        thread = threading.Thread(target=ai_worker, args=(task_id, filename, file_path))
+        thread.start()
+
+        # 立刻回傳 JSON 給前端，讓前端開始轉圈圈並去 check_task
+        return jsonify({
+            "status": "success",
+            "task_id": task_id,
+            "message": "檔案已上傳，開始辨識"
+        })
 
 # --- 4. 配合用的路由：檢查進度 ---
 
