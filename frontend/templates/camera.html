@@ -1,5 +1,5 @@
 <div class="card">
-	<h1>歡迎回來，{{ session['username'] }}！</h1>
+	<h1>恭喜上魚，{{ session['username'] }}！</h1>
 
 	<div
 		style="
@@ -41,96 +41,95 @@
 			正在上傳並準備回首頁...
 		</p>
 	</div>
-
-	<a href="{{ url_for('logout') }}">登出</a>
 </div>
 
 <script>
-    async function handleUpload() {
-        // 抓取畫面上的元素
-        const fileInput = document.getElementById("fileInput");
-        const btn = document.getElementById("submitBtn");
-        const statusText = document.getElementById("statusText");
+	async function handleUpload() {
+		// 抓取畫面上的元素
+		const fileInput = document.getElementById("fileInput");
+		const btn = document.getElementById("submitBtn");
+		const statusText = document.getElementById("statusText");
 
-        // 檢查使用者有沒有選擇檔案
-        if (!fileInput || fileInput.files.length === 0) {
-            alert('請先選擇一張照片！');
-            return;
-        }
+		// 檢查使用者有沒有選擇檔案
+		if (!fileInput || fileInput.files.length === 0) {
+			alert("請先選擇一張照片！");
+			return;
+		}
 
-        // 改變按鈕與文字狀態
-        const originalText = btn.innerText;
-        btn.innerText = '上傳中...';
-        btn.disabled = true;
-        statusText.style.display = "block"; // 顯示提示文字
-        statusText.innerText = "正在上傳照片... ⏳";
+		// 改變按鈕與文字狀態
+		const originalText = btn.innerText;
+		btn.innerText = "上傳中...";
+		btn.disabled = true;
+		statusText.style.display = "block"; // 顯示提示文字
+		statusText.innerText = "正在上傳照片... ⏳";
 
-        // 打包檔案
-        const formData = new FormData();
-        formData.append('file', fileInput.files[0]);
+		// 打包檔案
+		const formData = new FormData();
+		formData.append("file", fileInput.files[0]);
 
-        try {
-            // 呼叫 Flask 後端 API
-            const response = await fetch('/api/upload_async', {
-                method: 'POST',
-                body: formData
-            });
+		try {
+			// 呼叫 Flask 後端 API
+			const response = await fetch("/api/upload_async", {
+				method: "POST",
+				body: formData,
+			});
 
-            const result = await response.json();
+			const result = await response.json();
 
-            // 如果後端成功接收，開始等待 AI 辨識
-            if (result.status === 'success') {
-                btn.innerText = 'AI 辨識中...';
-                statusText.innerText = "照片已上傳！AI 正在分析中... 🐟";
-                const taskId = result.task_id;
-                
-                // 啟動輪詢檢查
-                checkTaskStatus(taskId, btn, originalText, statusText);
-            } else {
-                alert("錯誤：" + result.message);
-                btn.innerText = originalText;
-                btn.disabled = false;
-                statusText.style.display = "none";
-            }
+			// 如果後端成功接收，開始等待 AI 辨識
+			if (result.status === "success") {
+				btn.innerText = "AI 辨識中...";
+				statusText.innerText = "照片已上傳！AI 正在分析中... 🐟";
+				const taskId = result.task_id;
 
-        } catch (error) {
-            console.error("上傳發生錯誤:", error);
-            alert("無法連線到伺服器，請確認後端有啟動！");
-            btn.innerText = originalText;
-            btn.disabled = false;
-            statusText.style.display = "none";
-        }
-    }
+				// 啟動輪詢檢查
+				checkTaskStatus(taskId, btn, originalText, statusText);
+			} else {
+				alert("錯誤：" + result.message);
+				btn.innerText = originalText;
+				btn.disabled = false;
+				statusText.style.display = "none";
+			}
+		} catch (error) {
+			console.error("上傳發生錯誤:", error);
+			alert("無法連線到伺服器，請確認後端有啟動！");
+			btn.innerText = originalText;
+			btn.disabled = false;
+			statusText.style.display = "none";
+		}
+	}
 
-    // 這個函數會一直去問後端：「好了沒？」
-    async function checkTaskStatus(taskId, btn, originalText, statusText) {
-        try {
-            const response = await fetch(`/api/check_task/${taskId}`);
-            const data = await response.json();
+	// 這個函數會一直去問後端：「好了沒？」
+	async function checkTaskStatus(taskId, btn, originalText, statusText) {
+		try {
+			const response = await fetch(`/api/check_task/${taskId}`);
+			const data = await response.json();
 
-            if (data.status === 'completed') {
-                // 🎉 辨識成功！自動跳轉到結果頁面
-                statusText.innerText = "🎉 辨識完成！準備跳轉...";
-                window.location.href = `/result/${taskId}`;
-                
-            } else if (data.status === 'failed') {
-                // ❌ 辨識失敗
-                alert("辨識失敗：" + data.error_message);
-                btn.innerText = originalText;
-                btn.disabled = false;
-                statusText.style.display = "none";
-                
-            } else {
-                // ⏳ 還在處理中 (processing)，加個點點點讓畫面有動態感
-                statusText.innerText += " .";
-                // 等 1 秒後再問一次
-                setTimeout(() => checkTaskStatus(taskId, btn, originalText, statusText), 1000);
-            }
-        } catch (error) {
-            console.error("檢查狀態失敗:", error);
-            btn.innerText = originalText;
-            btn.disabled = false;
-            statusText.style.display = "none";
-        }
-    }
+			if (data.status === "completed") {
+				// 🎉 辨識成功！自動跳轉到結果頁面
+				statusText.innerText = "🎉 辨識完成！準備跳轉...";
+				window.location.href = `/result/${taskId}`;
+			} else if (data.status === "failed") {
+				// ❌ 辨識失敗
+				alert("辨識失敗：" + data.error_message);
+				btn.innerText = originalText;
+				btn.disabled = false;
+				statusText.style.display = "none";
+			} else {
+				// ⏳ 還在處理中 (processing)，加個點點點讓畫面有動態感
+				statusText.innerText += " .";
+				// 等 1 秒後再問一次
+				setTimeout(
+					() =>
+						checkTaskStatus(taskId, btn, originalText, statusText),
+					1000,
+				);
+			}
+		} catch (error) {
+			console.error("檢查狀態失敗:", error);
+			btn.innerText = originalText;
+			btn.disabled = false;
+			statusText.style.display = "none";
+		}
+	}
 </script>

@@ -1,73 +1,80 @@
 <!doctype html>
 <html lang="zh-Hant">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>魚類辨識首頁</title>
-        <link
-            rel="stylesheet"
-            href="{{ url_for('static', filename='styles/index.css') }}"
-        />
-    </head>
-    <body>
-        <div id="top-box" class="container">
-            <div class="top-content"></div>
-            
-            <div class="top-actions">
-                <a href="{{ url_for('camera_page') }}" style="text-decoration: none;">
-                    <button class="camera-btn" type="button">
-                        <div class="camera-body">
-                            <div class="camera-lens"></div>
-                        </div>
-                    </button>
-                </a>
-            </div>
-        </div> <input id="middle-input" type="text" placeholder="輸入問題詢問 AI..." />
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>魚類辨識首頁</title>
+		<link
+			rel="stylesheet"
+			href="{{ url_for('static', filename='styles/index.css') }}"
+		/>
+	</head>
+	<body>
+		<div id="top-box" class="container">
+			<div class="top-content"></div>
 
-        <div id="bottom-container" class="container">
-            <button id="bottom-button">傳送</button>
-        </div>
+			<div class="top-actions">
+				<a
+					href="{{ url_for('camera_page') }}"
+					style="text-decoration: none"
+				>
+					<button class="camera-btn" type="button">
+						<div class="camera-body">
+							<div class="camera-lens"></div>
+						</div>
+					</button>
+				</a>
+			</div>
+		</div>
+		<input id="middle-input" type="text" placeholder="輸入問題詢問 AI..." />
 
-        <div id="tidal-chart" class="container"></div>
+		<div id="bottom-container" class="container">
+			<button id="bottom-button">傳送</button>
+		</div>
 
-        <script src="{{ url_for('static', filename='script.js') }}"></script>
+		<div id="tidal-chart" class="container"></div>
+		<a href="{{ url_for('logout') }}">登出</a>
 
-        <script>
-            function checkAiTaskStatus() {
-                // 從瀏覽器記憶體取出任務 ID
-                const taskId = localStorage.getItem('fish_task_id');
-                
-                // 如果沒有任務，就什麼都不做
-                if (!taskId) return;
+		<script src="{{ url_for('static', filename='script.js') }}"></script>
 
-                console.log("偵測到背景辨識任務中，ID:", taskId);
+		<script>
+			function checkAiTaskStatus() {
+				// 從瀏覽器記憶體取出任務 ID
+				const taskId = localStorage.getItem("fish_task_id");
 
-                // 設定定時器，每 3 秒詢問一次後端
-                const interval = setInterval(async () => {
-                    try {
-                        const response = await fetch(`/api/check_task/${taskId}`);
-                        const data = await response.json();
+				// 如果沒有任務，就什麼都不做
+				if (!taskId) return;
 
-                        if (data.status === 'completed') {
-                            console.log("辨識完成！準備跳轉...");
-                            clearInterval(interval); // 停止定時器
-                            localStorage.removeItem('fish_task_id'); // 刪除任務 ID
-                            
-                            // 自動跳轉到結果頁面
-                            window.location.href = `/result/${taskId}`;
-                        } else if (data.status === 'not_found') {
-                            // 如果後端找不到這個任務，可能發生錯誤，停止詢問
-                            clearInterval(interval);
-                            localStorage.removeItem('fish_task_id');
-                        }
-                    } catch (error) {
-                        console.error("輪詢時發生錯誤:", error);
-                    }
-                }, 3000);
-            }
+				console.log("偵測到背景辨識任務中，ID:", taskId);
 
-            // 當首頁載入完成時立刻執行檢查
-            document.addEventListener('DOMContentLoaded', checkAiTaskStatus);
-        </script>
-    </body>
+				// 設定定時器，每 3 秒詢問一次後端
+				const interval = setInterval(async () => {
+					try {
+						const response = await fetch(
+							`/api/check_task/${taskId}`,
+						);
+						const data = await response.json();
+
+						if (data.status === "completed") {
+							console.log("辨識完成！準備跳轉...");
+							clearInterval(interval); // 停止定時器
+							localStorage.removeItem("fish_task_id"); // 刪除任務 ID
+
+							// 自動跳轉到結果頁面
+							window.location.href = `/result/${taskId}`;
+						} else if (data.status === "not_found") {
+							// 如果後端找不到這個任務，可能發生錯誤，停止詢問
+							clearInterval(interval);
+							localStorage.removeItem("fish_task_id");
+						}
+					} catch (error) {
+						console.error("輪詢時發生錯誤:", error);
+					}
+				}, 3000);
+			}
+
+			// 當首頁載入完成時立刻執行檢查
+			document.addEventListener("DOMContentLoaded", checkAiTaskStatus);
+		</script>
+	</body>
 </html>
