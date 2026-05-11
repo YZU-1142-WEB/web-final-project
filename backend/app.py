@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
 from LLM.LLM import llm_service
 import threading
-from image_identify.image_identify import Image_identify_service
+from image_identify.image_identify import analyze_catch_image
 from ai_task import background_ai_task
 import time
 
@@ -150,7 +150,7 @@ def chat_endpoint():
 # 更新
 @app.route('/api/upload_async', methods=['POST'])
 def upload_async():
-    # 1. 檢查登入狀態 (因為是 API，所以回傳 JSON 錯誤，而不是 redirect)
+    # 1. 檢查登入狀態
     if 'username' not in session:
         return jsonify({"status": "error", "message": "請先登入"}), 401
 
@@ -170,27 +170,38 @@ def upload_async():
         task_id = filename
         recognition_results[task_id] = {"status": "processing"}
 
+        # --- 2. 定義背景工作 (注意縮排要包在 if file: 裡面) ---
         def ai_worker(tid, fname, path):
-            # 這裡模擬 AI 辨識需要 5 秒 (你可以換成真正的 ai_result = predict_fish_species(path))
-            time.sleep(5)
-            ai_result = "吳郭魚 (AI 辨識結果)"
+            try:
+                # 呼叫剛剛寫好的辨識函式
+                predictions = analyze_catch_image(path)
+                
+                if predictions:
+                    # 取得信心指數最高的結果
+                    best_match = predictions[0]
+                    ai_result = f"{best_match['name']} (信心度: {best_match['score']*100:.1f}%)"
+                else:
+                    ai_result = "圖片中未偵測到明顯魚類"
 
-            # 更新結果字典
-            recognition_results[tid] = {
-                "status": "completed",
-                "img_file": fname,
-                "fish_name": ai_result
-            }
-            # (選填) 如果要存資料庫，也可以寫在這裡
-            # db.session.add(FishRecord(...))
-            # db.session.commit()
+                recognition_results[tid] = {
+                    "status": "completed",
+                    "img_file": fname,
+                    "fish_name": ai_result,
+                    "all_predictions": predictions
+                }
+            except Exception as e:
+                print(f"❌ 背景辨識錯誤: {e}")
+                recognition_results[tid] = {
+                    "status": "failed",
+                    "error_message": str(e)
+                }
 
-        # 啟動 Thread 執行背景任務
-        thread = threading.Thread(
-            target=ai_worker, args=(task_id, filename, file_path))
+        # --- 3. 剛剛不小心被刪掉的關鍵啟動區塊 ---
+        # 啟動 Thread 讓辨識在背景執行，不卡死主程式
+        thread = threading.Thread(target=ai_worker, args=(task_id, filename, file_path))
         thread.start()
 
-        # --- 3. 關鍵改動：不渲染頁面，改回傳 JSON ---
+        # 立刻回傳 JSON 給前端，讓前端開始轉圈圈並去 check_task
         return jsonify({
             "status": "success",
             "task_id": task_id,
@@ -198,7 +209,6 @@ def upload_async():
         })
 
 # --- 4. 配合用的路由：檢查進度 ---
-
 
 @app.route('/api/check_task/<task_id>')
 def check_task(task_id):
