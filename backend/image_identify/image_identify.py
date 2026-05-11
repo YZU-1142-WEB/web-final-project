@@ -1,48 +1,62 @@
 import os
-from ultralytics import YOLO
+import json
+from dotenv import load_dotenv
+from google import genai
+from google.genai import types
 
-# --- 自動路徑定位 ---
-# 取得目前這個檔案 (image_identify.py) 的絕對路徑資料夾
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-# 組合出模型檔案的完整路徑：.../backend/image_identify/yolov8n.pt
-MODEL_PATH = os.path.join(CURRENT_DIR, "yolov8n.pt")
+# 1. 載入 .env 檔案
+load_dotenv()
 
-# 在模組載入時就先初始化模型，避免每次辨識都要重新讀取檔案
-try:
-    if os.path.exists(MODEL_PATH):
-        # 載入你剛下載的 YOLOv8 權重
-        model = YOLO(MODEL_PATH)
-        print(f"✅ [AI 服務] 成功從 {MODEL_PATH} 載入模型")
-    else:
-        print(f"❌ [AI 服務] 找不到模型檔：{MODEL_PATH}")
-        model = None
-except Exception as e:
-    print(f"⚠️ [AI 服務] 模型載入發生錯誤: {e}")
-    model = None
+# 2. 使用 os 抓取 API Key
+api_key = os.getenv("GEMINI_API_KEY")
+
+# 加上防呆機制：如果沒抓到，直接丟出例外 (Exception) 中斷程式
+if not api_key:
+    raise ValueError("❌ 找不到 GEMINI_API_KEY！請檢查 .env 檔案是否設定正確，或重啟終端機。")
+
+# 3. 明確地將抓到的 api_key 傳給 Client
+client = genai.Client(api_key=api_key)
 
 def analyze_catch_image(image_path):
     """
-    接收圖片路徑，使用 YOLO 進行辨識，回傳標籤清單。
+    接收圖片路徑，呼叫 Gemini 視覺模型進行辨識，回傳標籤清單。
     """
-    if model is None:
-        raise Exception("AI 模型未就緒，請檢查 yolov8n.pt 是否存在。")
+    try:
+        # 讀取本機圖片並轉為 bytes
+        with open(image_path, "rb") as f:
+            image_bytes = f.read()
+            
+        # 決定圖片的 mime_type (簡單判斷副檔名)
+        mime_type = "image/png" if image_path.lower().endswith(".png") else "image/jpeg"
 
-    # 執行推論
-    results = model(image_path)
-    result = results[0]  # 取得第一張圖片的結果
-    
-    predictions = []
-    
-    # 如果有偵測到物體 (boxes)
-    if len(result.boxes) > 0:
-        for box in result.boxes:
-            class_id = int(box.cls)      # 類別 ID
-            name = result.names[class_id] # 類別名稱 (如 'fish')
-            score = float(box.conf)      # 信心指數
-            
-            predictions.append({
-                "name": name,
-                "score": round(score, 4)
-            })
-            
-    return predictions
+        # 設定給 AI 的提示詞
+        prompt = """你是一個專業的台灣魚類辨識專家。請分析圖片中的魚類，並嚴格以 JSON 格式回傳。
+        格式範例：{"name": "魚的中文名稱", "score": 0.98, "description": "關於這條魚的簡短介紹或建議料理方式"}"""
+
+        # 發送請求給 Gemini (使用 gemini-1.5-flash 確保有免費額度)
+        response = client.models.generate_content(
+            model='gemini-2.0-flash',
+            contents=[
+                prompt,
+                types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
+            ],
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json", # 強制回傳 JSON
+            ),
+        )
+        
+        # 解析回傳的 JSON 字串
+        result_json = json.loads(response.text)
+        
+        # 包裝成前端 app.py 需要的 List 格式
+        predictions = [{
+            "name": result_json.get("name", "未知魚種"),
+            "score": result_json.get("score", 0.0),
+            "description": result_json.get("description", "無詳細介紹")
+        }]
+        
+        return predictions
+
+    except Exception as e:
+        print(f"❌ Gemini 辨識發生錯誤: {e}")
+        return None

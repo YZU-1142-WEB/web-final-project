@@ -3,5 +3,5 @@ Flask-Cors
 Flask-SQLAlchemy
 python-dotenv
 google-genai
-google-cloud-vision
+openai
 ultralytics
