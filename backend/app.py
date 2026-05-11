@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
 from LLM.LLM import llm_service
 import threading
-from image_identify.image_identify import Image_identify_service
+from image_identify.image_identify import analyze_catch_image
 from ai_task import background_ai_task
 import time
 
@@ -171,34 +171,36 @@ def upload_async():
         recognition_results[task_id] = {"status": "processing"}
 
         def ai_worker(tid, fname, path):
-            # 這裡模擬 AI 辨識需要 5 秒 (你可以換成真正的 ai_result = predict_fish_species(path))
-            time.sleep(5)
-            ai_result = "吳郭魚 (AI 辨識結果)"
+            try:
+                # 1. 真正呼叫你的 Google Vision API 辨識函式
+                # 這會回傳一個 List，例如: [{"name": "Fish", "score": 0.98}, ...]
+                predictions = analyze_catch_image(path)
+                
+                # 2. 整理辨識結果
+                if predictions:
+                    # 抓取信心指數最高的第一個結果當作主要顯示名稱
+                    best_match = predictions[0]
+                    ai_result = f"{best_match['name']} (信心指數: {best_match['score']*100:.1f}%)"
+                else:
+                    ai_result = "無法辨識出任何魚類特徵"
 
-            # 更新結果字典
-            recognition_results[tid] = {
-                "status": "completed",
-                "img_file": fname,
-                "fish_name": ai_result
-            }
-            # (選填) 如果要存資料庫，也可以寫在這裡
-            # db.session.add(FishRecord(...))
-            # db.session.commit()
+                # 3. 更新結果字典 (狀態改為 completed)
+                recognition_results[tid] = {
+                    "status": "completed",
+                    "img_file": fname,
+                    "fish_name": ai_result,
+                    "all_predictions": predictions # 把完整清單也存下來，以後可能用得到
+                }
 
-        # 啟動 Thread 執行背景任務
-        thread = threading.Thread(
-            target=ai_worker, args=(task_id, filename, file_path))
-        thread.start()
-
-        # --- 3. 關鍵改動：不渲染頁面，改回傳 JSON ---
-        return jsonify({
-            "status": "success",
-            "task_id": task_id,
-            "message": "檔案已上傳，開始辨識"
-        })
+            except Exception as e:
+                # 4. 錯誤處理：如果 GCP 沒設定好或發生網路錯誤，更新狀態為 failed
+                print(f"背景辨識發生錯誤 (Task ID: {tid}): {e}")
+                recognition_results[tid] = {
+                    "status": "failed",
+                    "error_message": str(e)
+                }
 
 # --- 4. 配合用的路由：檢查進度 ---
-
 
 @app.route('/api/check_task/<task_id>')
 def check_task(task_id):

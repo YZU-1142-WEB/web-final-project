@@ -56,4 +56,3 @@ if __name__ == "__main__":
         # 如果路徑錯誤或金鑰沒設定好，這裡會清楚印出錯誤原因
         print(f"發生錯誤：{e}")
 
-Image_identify_service = analyze_catch_image()
