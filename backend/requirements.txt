@@ -5,3 +5,7 @@ python-dotenv
 google-genai
 google-cloud-vision
 ultralytics
+psycopg2-binary
+markdown
+langchain-google-genai
+langchain-core

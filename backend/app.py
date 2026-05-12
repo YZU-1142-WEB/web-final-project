@@ -47,9 +47,9 @@ class FishRecord(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(20), nullable=False)
     image_url = db.Column(db.String(255), nullable=False)
-    # processing, completed, failed
     status = db.Column(db.String(20), default='processing')
     fish_type = db.Column(db.String(100), nullable=True)
+    description = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
@@ -61,166 +61,111 @@ def dashboard():
     return redirect(url_for('login'))
 
 
-# 這裡先用全域變數 如果有空的話可以改為存進資料庫 (模擬存放 AI 辨識結果的資料庫 重啟後會消失)
 recognition_results = {}
+# 這裡先用全域變數 如果有空的話可以改為存進資料庫 (模擬存放 AI 辨識結果的資料庫 重啟後會消失)# ==========================================
 
 
-@app.route('/')
-def home():
-    if 'username' in session:
-        return render_template('index.html', username=session['username'])
-    # flash("請先登入")
-    return redirect(url_for('login'))
-
-
-@app.route('/api/status', methods=['GET'])
-def get_status():
-    return jsonify({"status": "success", "message": "台灣常見魚種辨識系統 API 運作中！"})
-
-
-@app.route('/camera')
-def camera_page():
-    if 'username' in session:
-        return render_template('camera.html', username=session['username'])
-    flash("請先登入")
-    return redirect(url_for('login'))
-
-
-@app.route('/api/account/login', methods=['GET', 'POST'])
-def login():
-    if 'username' in session:
-        return redirect(url_for('home'))
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        user = User.query.filter_by(username=username).first()
-        if user and user.password == password:
-            session['username'] = user.username
-            session['user_id'] = user.id
-            return redirect(url_for('home'))
-        flash("帳號或密碼錯誤")
-    return render_template('login.html')
-
-
-@app.route('/api/account/register', methods=['GET', 'POST'])
-def register_page():
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        existing_user = User.query.filter_by(username=username).first()
-        if existing_user is None:
-            new_user = User(username=username, password=password)
-            db.session.add(new_user)
-            db.session.commit()
-            flash("註冊成功，請登入！")
-            return redirect(url_for('login'))
-        flash("該帳號已存在！")
-    return render_template('register.html')
-
-
-@app.route('/api/account/logout')
-def logout():
-    session.pop('username', None)
-    session.pop('user_id', None)
-    flash("您已成功登出")
-    return redirect(url_for('login'))
-
-
-@app.route('/api/LLM', methods=['POST'])
-def chat_endpoint():
-    if 'username' not in session:
-        return jsonify({"success": False, "error": "請先登入"}), 401
-    data = request.get_json()
-    user_message = data.get('input_text')
-    if not user_message:
-        return jsonify({"success": False, "error": "請提供問題"}), 400
-    result = llm_service.chat(user_message)
-
-    if result["success"]:
-        return jsonify({
-            "success": True,
-            "reply": result["reply"]
-        })
-    else:
-        return jsonify({
-            "success": False,
-            "error": result["error"]
-        }), 500
-
-
-# 準備一個新的字典來裝 LLM 的任務狀態
-llm_tasks = {}
-
-@app.route('/api/ask_llm_async', methods=['POST'])
-def ask_llm_async():
+@app.route('/api/upload_async', methods=['POST'])
+def upload_async():
     if 'username' not in session:
         return jsonify({"status": "error", "message": "請先登入"}), 401
 
-    data = request.get_json()
-    user_message = data.get('input_text')
-    
-    if not user_message:
-        return jsonify({"status": "error", "message": "請提供問題"}), 400
+    if 'file' not in request.files:
+        return jsonify({"status": "error", "message": "未接收到檔案"}), 400
 
-    # 1. 產生一個唯一的任務 ID
-    task_id = f"llm_{uuid.uuid4().hex[:8]}"
-    llm_tasks[task_id] = {"status": "processing"}
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"status": "error", "message": "未選取檔案"}), 400
 
-    # 2. 定義背景工作
-    def llm_worker(tid, msg):
-        try:
-            # 呼叫你原本寫好的 LLM 服務
-            result = llm_service.chat(msg)
-            
-            if result.get("success"):
-                # 👉 新增這行：把 AI 的 Markdown 文字，完美轉換成 HTML 標籤
-                # extensions=['nl2br'] 是為了讓 AI 的單行換行也能正常顯示
-                html_reply = markdown.markdown(result["reply"], extensions=['nl2br'])
+    if file:
+        # 1. 儲存檔案到本地 (未來部署時這裡會改成存到 Google Cloud Storage)
+        filename = secure_filename(file.filename)
+        filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
 
-                llm_tasks[tid] = {
-                    "status": "completed",
-                    "question": msg,
-                    "reply": html_reply  # 👉 這裡存入轉換好的 HTML
-                }
-            else:
-                llm_tasks[tid] = {
-                    "status": "failed",
-                    "error_message": result.get("error", "AI 發生錯誤")
-                }
-        except Exception as e:
-            print(f"❌ LLM 背景錯誤: {e}")
-            llm_tasks[tid] = {"status": "failed", "error_message": str(e)}
+        # 👉 2. 真正寫入資料庫！建立一筆「處理中」的紀錄
+        new_record = FishRecord(
+            username=session['username'],
+            image_url=filename,
+            status='processing'
+        )
+        db.session.add(new_record)
+        db.session.commit()
 
-    # 3. 啟動背景執行緒
-    thread = threading.Thread(target=llm_worker, args=(task_id, user_message))
-    thread.start()
+        # 取得資料庫自動產生的流水號 ID 作為 task_id
+        task_id = new_record.id
 
-    # 4. 告訴前端任務已經開始
+        # 3. 定義背景工作
+        def ai_worker(record_id, path):
+            # 👉 關鍵修復：背景執行緒必須注入 app_context 才能操作資料庫！
+            with app.app_context():
+                # 把剛才那筆紀錄從資料庫拿出來
+                record = FishRecord.query.get(record_id)
+                if not record:
+                    return
+
+                try:
+                    # 呼叫 AI 辨識
+                    predictions = analyze_catch_image(path)
+
+                    if predictions:
+                        best_match = predictions[0]
+                        record.fish_type = f"{best_match['name']} (信心度: {best_match['score']*100:.1f}%)"
+                        record.description = best_match.get(
+                            'description', '無詳細介紹')
+                    else:
+                        record.fish_type = "圖片中未偵測到明顯魚類"
+                        record.description = "無法提供介紹"
+
+                    # 標記為完成並儲存回資料庫
+                    record.status = 'completed'
+                    db.session.commit()
+
+                except Exception as e:
+                    print(f"❌ 背景辨識錯誤: {e}")
+                    record.status = 'failed'
+                    db.session.commit()
+
+        # 4. 啟動 Thread 背景執行
+        thread = threading.Thread(target=ai_worker, args=(task_id, file_path))
+        thread.start()
+
+        return jsonify({
+            "status": "success",
+            "task_id": task_id,
+            "message": "檔案已上傳，開始辨識"
+        })
+
+
+@app.route('/api/check_task/<task_id>')
+def check_task(task_id):
+    # 👉 直接去資料庫查詢狀態
+    record = FishRecord.query.get(task_id)
+    if not record:
+        return jsonify({"status": "not_found"})
+
+    # 轉換成前端需要的 JSON 格式
     return jsonify({
-        "status": "success",
-        "task_id": task_id,
-        "message": "AI 正在思考中..."
+        "status": record.status,
+        "fish_name": record.fish_type
     })
 
-# --- 配合用的路由：檢查 LLM 進度 ---
-@app.route('/api/check_llm_task/<task_id>')
-def check_llm_task(task_id):
-    result = llm_tasks.get(task_id, {"status": "not_found"})
-    return jsonify(result)
 
-# --- 配合用的路由：顯示 LLM 結果頁 ---
-@app.route('/llm_result/<task_id>')
-def llm_result_page(task_id):
-    result = llm_tasks.get(task_id)
-    if not result or result['status'] != 'completed':
+@app.route('/result/<task_id>')
+def result_page(task_id):
+    # 👉 直接從資料庫撈取結果渲染畫面
+    record = FishRecord.query.get(task_id)
+    if not record or record.status != 'completed':
         return redirect(url_for('home'))
 
-    # 把問題和回答送去剛剛寫好的 llm_result.html
-    return render_template('llm_result.html',
-                           question=result['question'],
-                           reply=result['reply'])
-
+    return render_template('result.html',
+                           img_file=record.image_url,
+                           fish_name=record.fish_type,
+                           description=record.description)
 # picture
+
+
 @app.route('/api/upload_async', methods=['POST'])
 def upload_async():
     # 1. 檢查登入狀態
@@ -248,7 +193,7 @@ def upload_async():
             try:
                 # 呼叫剛剛寫好的辨識函式
                 predictions = analyze_catch_image(path)
-                
+
                 if predictions:
                     # 取得信心指數最高的結果
                     best_match = predictions[0]
@@ -271,7 +216,8 @@ def upload_async():
 
         # --- 3. 剛剛不小心被刪掉的關鍵啟動區塊 ---
         # 啟動 Thread 讓辨識在背景執行，不卡死主程式
-        thread = threading.Thread(target=ai_worker, args=(task_id, filename, file_path))
+        thread = threading.Thread(
+            target=ai_worker, args=(task_id, filename, file_path))
         thread.start()
 
         # 立刻回傳 JSON 給前端，讓前端開始轉圈圈並去 check_task
@@ -282,6 +228,7 @@ def upload_async():
         })
 
 # --- 4. 配合用的路由：檢查進度 ---
+
 
 @app.route('/api/check_task/<task_id>')
 def check_task(task_id):
