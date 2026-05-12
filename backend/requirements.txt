@@ -1,7 +1,10 @@
-Flask
-Flask-Cors
-Flask-SQLAlchemy
-python-dotenv
-google-genai
-openai
-ultralytics
+Flask==2.3.3
+Flask-Cors==4.0.0
+Flask-SQLAlchemy==3.0.5
+python-dotenv==1.0.0
+google-genai==0.3.0
+openai==1.3.0
+ultralytics==8.0.196
+langchain-google-genai>=1.0.1
+langchain-core>=0.1.13
+Werkzeug==2.3.7

@@ -12,11 +12,12 @@
 			<h3>輕鬆又快速的釣魚紀錄小棧</h3>
 			<h2>混跡漁生</h2>
 
-			<!-- 顯示錯誤訊息 (例如：帳號或密碼錯誤) -->
-			{% with messages = get_flashed_messages() %} {% if messages %} {%
-			for message in messages %}
-			<p style="color: red">{{ message }}</p>
-			{% endfor %} {% endif %} {% endwith %}
+			<!-- ✅ 顯示錯誤訊息 (例如：帳號或密碼錯誤) -->
+			{% if error %}
+			<p style="color: red; padding: 10px; background-color: #ffe0e0; border-radius: 5px;">
+				❌ {{ error }}
+			</p>
+			{% endif %}
 
 			<form method="POST">
 				<input
@@ -34,7 +35,7 @@
 				<button type="submit">登入</button>
 			</form>
 			<p class="footer-text">
-				還沒有帳號？ <a href="{{url_for('register_page')}}">立即註冊</a>
+				還沒有帳號？ <a href="{{ url_for('register_page') }}">立即註冊</a>
 			</p>
 		</div>
 	</body>

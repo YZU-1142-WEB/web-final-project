@@ -1,54 +1,58 @@
 import os
 import json
+import base64
 from dotenv import load_dotenv
-from google import genai
-from google.genai import types
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.messages import HumanMessage
 
-# 1. 載入 .env 檔案
-load_dotenv()
-
-# 2. 使用 os 抓取 API Key
+# 載入環境變數
+load_dotenv(override=True)
 api_key = os.getenv("GEMINI_API_KEY")
 
-# 加上防呆機制：如果沒抓到，直接丟出例外 (Exception) 中斷程式
 if not api_key:
-    raise ValueError("❌ 找不到 GEMINI_API_KEY！請檢查 .env 檔案是否設定正確，或重啟終端機。")
+    raise ValueError("❌ 找不到 API Key！")
 
-# 3. 明確地將抓到的 api_key 傳給 Client
-client = genai.Client(api_key=api_key)
+# 這裡直接套用你剛剛測試成功的 LangChain 寫法！
+# 建議用 gemini-2.5-flash 或 gemini-1.5-flash，因為它們看圖片比較聰明
+llm_gemini = ChatGoogleGenerativeAI(
+    model="gemini-1.5-flash", 
+    google_api_key=api_key
+)
+
+def encode_image(image_path):
+    """將圖片轉成 Base64 格式給 LangChain 讀取"""
+    with open(image_path, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode('utf-8')
 
 def analyze_catch_image(image_path):
-    """
-    接收圖片路徑，呼叫 Gemini 視覺模型進行辨識，回傳標籤清單。
-    """
     try:
-        # 讀取本機圖片並轉為 bytes
-        with open(image_path, "rb") as f:
-            image_bytes = f.read()
-            
-        # 決定圖片的 mime_type (簡單判斷副檔名)
-        mime_type = "image/png" if image_path.lower().endswith(".png") else "image/jpeg"
-
-        # 設定給 AI 的提示詞
-        prompt = """你是一個專業的台灣魚類辨識專家。請分析圖片中的魚類，並嚴格以 JSON 格式回傳。
-        格式範例：{"name": "魚的中文名稱", "score": 0.98, "description": "關於這條魚的簡短介紹或建議料理方式"}"""
-
-        # 發送請求給 Gemini (使用 gemini-1.5-flash 確保有免費額度)
-        response = client.models.generate_content(
-            model='gemini-2.0-flash',
-            contents=[
-                prompt,
-                types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
-            ],
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json", # 強制回傳 JSON
-            ),
+        # 1. 圖片轉碼
+        base64_image = encode_image(image_path)
+        
+        # 2. 組合 LangChain 支援的「多模態 (文字+圖片)」訊息格式
+        message = HumanMessage(
+            content=[
+                {
+                    "type": "text", 
+                    "text": """你是一個專業的台灣魚類辨識專家。請分析圖片中的魚類，並嚴格以 JSON 格式回傳。不要有任何 Markdown 標記 (如 ```json)。
+                    格式範例：{"name": "魚的中文名稱", "score": 0.98, "description": "關於這條魚的簡短介紹或建議料理方式"}"""
+                },
+                {
+                    "type": "image_url", 
+                    "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}
+                }
+            ]
         )
         
-        # 解析回傳的 JSON 字串
-        result_json = json.loads(response.text)
+        # 3. 發送請求！(走你剛剛證明會通的那條路)
+        response = llm_gemini.invoke([message])
         
-        # 包裝成前端 app.py 需要的 List 格式
+        # 4. 解析 JSON
+        # 把 AI 可能會雞婆加上的 Markdown 標籤清乾淨
+        clean_text = response.content.replace("```json", "").replace("```", "").strip()
+        result_json = json.loads(clean_text)
+        
+        # 5. 包裝回傳給 Flask
         predictions = [{
             "name": result_json.get("name", "未知魚種"),
             "score": result_json.get("score", 0.0),
@@ -58,5 +62,5 @@ def analyze_catch_image(image_path):
         return predictions
 
     except Exception as e:
-        print(f"❌ Gemini 辨識發生錯誤: {e}")
+        print(f"❌ LangChain 影像辨識錯誤: {e}")
         return None

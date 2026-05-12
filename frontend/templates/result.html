@@ -32,13 +32,23 @@
 	</head>
 	<body>
 		<div class="card">
-			<h2>辨識完畢！</h2>
+			<h2>🎉 辨識完畢！</h2>
 			<img
 				src="{{ url_for('static', filename='uploads/' + img_file) }}"
+				alt="辨識的魚類"
 			/>
 			<p>這隻魚是：<span class="fish-tag">{{ fish_name }}</span></p>
+			{% if fish_score %}
+			<p>信心度：<strong>{{ "%.1f" | format(fish_score * 100) }}%</strong></p>
+			{% endif %}
+			{% if fish_description %}
+			<p style="text-align: left; background-color: #f0f0f0; padding: 10px; border-radius: 5px;">
+				<strong>📝 介紹：</strong><br>
+				{{ fish_description }}
+			</p>
+			{% endif %}
 			<br />
-			<a href="/">回到主畫面</a>
+			<a href="/">⬅️ 回到主畫面</a>
 		</div>
 	</body>
 </html>
