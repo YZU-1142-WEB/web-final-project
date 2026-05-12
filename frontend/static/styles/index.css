@@ -124,6 +124,8 @@ body {
     border-color: var(--primary-blue); /* 點擊時變藍色 */
 }
 
+
+
 #bottom-container {
     width: 620px;
     height: 60px;
