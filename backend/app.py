@@ -224,10 +224,16 @@ def result_page(task_id):
     if not result or result['status'] != 'completed':
         return redirect(url_for('home'))
 
-    # 這裡渲染你原本的 result.html
+    # 👉 新增這段：安全地把 description 從字典裡挖出來
+    description = "無詳細介紹"
+    if result.get('all_predictions') and len(result['all_predictions']) > 0:
+        description = result['all_predictions'][0].get('description', '無詳細介紹')
+
+    # 👉 把 description 一起打包上車傳給前端
     return render_template('result.html',
                            img_file=result['img_file'],
-                           fish_name=result['fish_name'])
+                           fish_name=result['fish_name'],
+                           description=description)
 
 
 if __name__ == '__main__':
