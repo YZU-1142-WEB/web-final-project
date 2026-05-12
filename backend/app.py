@@ -9,7 +9,8 @@ from LLM.LLM import llm_service
 import threading
 from image_identify.image_identify import analyze_catch_image
 from ai_task import background_ai_task
-import time
+import markdown
+import uuid
 
 load_dotenv()
 
@@ -147,7 +148,79 @@ def chat_endpoint():
         }), 500
 
 
-# 更新
+# 準備一個新的字典來裝 LLM 的任務狀態
+llm_tasks = {}
+
+@app.route('/api/ask_llm_async', methods=['POST'])
+def ask_llm_async():
+    if 'username' not in session:
+        return jsonify({"status": "error", "message": "請先登入"}), 401
+
+    data = request.get_json()
+    user_message = data.get('input_text')
+    
+    if not user_message:
+        return jsonify({"status": "error", "message": "請提供問題"}), 400
+
+    # 1. 產生一個唯一的任務 ID
+    task_id = f"llm_{uuid.uuid4().hex[:8]}"
+    llm_tasks[task_id] = {"status": "processing"}
+
+    # 2. 定義背景工作
+    def llm_worker(tid, msg):
+        try:
+            # 呼叫你原本寫好的 LLM 服務
+            result = llm_service.chat(msg)
+            
+            if result.get("success"):
+                # 👉 新增這行：把 AI 的 Markdown 文字，完美轉換成 HTML 標籤
+                # extensions=['nl2br'] 是為了讓 AI 的單行換行也能正常顯示
+                html_reply = markdown.markdown(result["reply"], extensions=['nl2br'])
+
+                llm_tasks[tid] = {
+                    "status": "completed",
+                    "question": msg,
+                    "reply": html_reply  # 👉 這裡存入轉換好的 HTML
+                }
+            else:
+                llm_tasks[tid] = {
+                    "status": "failed",
+                    "error_message": result.get("error", "AI 發生錯誤")
+                }
+        except Exception as e:
+            print(f"❌ LLM 背景錯誤: {e}")
+            llm_tasks[tid] = {"status": "failed", "error_message": str(e)}
+
+    # 3. 啟動背景執行緒
+    thread = threading.Thread(target=llm_worker, args=(task_id, user_message))
+    thread.start()
+
+    # 4. 告訴前端任務已經開始
+    return jsonify({
+        "status": "success",
+        "task_id": task_id,
+        "message": "AI 正在思考中..."
+    })
+
+# --- 配合用的路由：檢查 LLM 進度 ---
+@app.route('/api/check_llm_task/<task_id>')
+def check_llm_task(task_id):
+    result = llm_tasks.get(task_id, {"status": "not_found"})
+    return jsonify(result)
+
+# --- 配合用的路由：顯示 LLM 結果頁 ---
+@app.route('/llm_result/<task_id>')
+def llm_result_page(task_id):
+    result = llm_tasks.get(task_id)
+    if not result or result['status'] != 'completed':
+        return redirect(url_for('home'))
+
+    # 把問題和回答送去剛剛寫好的 llm_result.html
+    return render_template('llm_result.html',
+                           question=result['question'],
+                           reply=result['reply'])
+
+# picture
 @app.route('/api/upload_async', methods=['POST'])
 def upload_async():
     # 1. 檢查登入狀態
@@ -224,12 +297,12 @@ def result_page(task_id):
     if not result or result['status'] != 'completed':
         return redirect(url_for('home'))
 
-    # 👉 新增這段：安全地把 description 從字典裡挖出來
+    # 把 description 從字典裡挖出來
     description = "無詳細介紹"
     if result.get('all_predictions') and len(result['all_predictions']) > 0:
         description = result['all_predictions'][0].get('description', '無詳細介紹')
 
-    # 👉 把 description 一起打包上車傳給前端
+    #  把 description 一起打包上車傳給前端
     return render_template('result.html',
                            img_file=result['img_file'],
                            fish_name=result['fish_name'],
