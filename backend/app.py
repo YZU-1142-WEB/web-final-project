@@ -1,13 +1,13 @@
 import os
 import base64
 import threading
+import uuid
+import markdown
 from datetime import datetime
 from flask import Flask, render_template, redirect, url_for, request, session, flash, jsonify
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
-
-# 載入自訂模組
 from LLM.LLM import llm_service
 from image_identify.image_identify import analyze_catch_image
 
@@ -25,10 +25,6 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# ==========================================
-# 資料庫模型 (Models)
-# ==========================================
-
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -42,14 +38,14 @@ class FishRecord(db.Model):
     __tablename__ = 'fish_records'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(20), nullable=False)
-    image_url = db.Column(db.Text, nullable=False)  # 存放 Base64 文字
+    image_url = db.Column(db.Text, nullable=False)
     status = db.Column(db.String(20), default='processing')
     fish_type = db.Column(db.String(100), nullable=True)
     description = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 # ==========================================
-# 帳號系統與基本網頁路由 (Web Routes)
+# 帳號系統與基本網頁路由
 # ==========================================
 
 
@@ -116,44 +112,78 @@ def logout():
     flash("您已成功登出")
     return redirect(url_for('login'))
 
+
 # ==========================================
-# LLM 聊天室路由
+# LLM 聊天室路由 (保留同學的非同步機制)
 # ==========================================
 
+llm_tasks = {}
 
-@app.route('/api/LLM', methods=['POST'])
-def chat_endpoint():
+
+@app.route('/api/llm/ask', methods=['POST'])
+def ask_llm_async():
     if 'username' not in session:
         return jsonify({"status": "error", "message": "請先登入"}), 401
 
     data = request.get_json()
     user_message = data.get('input_text')
+
     if not user_message:
         return jsonify({"status": "error", "message": "請提供問題"}), 400
 
-    result = llm_service.chat(user_message)
+    task_id = f"llm_{uuid.uuid4().hex[:8]}"
+    llm_tasks[task_id] = {"status": "processing"}
 
-    if result["success"]:
-        return jsonify({
-            "status": "success",
-            "response": result["reply"]
-        })
-    else:
-        return jsonify({
-            "status": "error",
-            "message": result["error"]
-        }), 500
+    def llm_worker(tid, msg):
+        try:
+            result = llm_service.chat(msg)
+            if result.get("success"):
+                html_reply = markdown.markdown(
+                    result["reply"], extensions=['nl2br'])
+                llm_tasks[tid] = {
+                    "status": "completed",
+                    "question": msg,
+                    "reply": html_reply
+                }
+            else:
+                llm_tasks[tid] = {"status": "failed",
+                                  "error_message": result.get("error", "AI 發生錯誤")}
+        except Exception as e:
+            llm_tasks[tid] = {"status": "failed", "error_message": str(e)}
+
+    thread = threading.Thread(target=llm_worker, args=(task_id, user_message))
+    thread.start()
+    return jsonify({"status": "success", "task_id": task_id, "message": "AI 正在思考中..."})
+
+
+@app.route('/api/llm/check_task/<task_id>')
+def check_llm_task(task_id):
+    return jsonify(llm_tasks.get(task_id, {"status": "not_found"}))
+
+
+@app.route('/api/llm/result/<task_id>')
+def llm_result_page(task_id):
+    result = llm_tasks.get(task_id)
+    if not result or result['status'] != 'completed':
+        return redirect(url_for('home'))
+
+    session['chat_history'] = [
+        {"role": "user", "content": result['question']},
+        {"role": "assistant", "content": result['reply']}
+    ]
+    session.modified = True
+
+    return render_template('llm_result.html', question=result['question'], reply=result['reply'])
 
 # ==========================================
-# 圖片上傳與 AI 辨識路由 (完全基於資料庫與非同步)
+# 圖片上傳與 AI 辨識路由 (修復：回歸 DB 架構 + 同學防呆邏輯)
 # ==========================================
 
 
-@app.route('/api/upload_async', methods=['POST'])
+@app.route('/api/picture/upload', methods=['POST'])
 def upload_async():
     if 'username' not in session:
         return jsonify({"status": "error", "message": "請先登入"}), 401
-
     if 'file' not in request.files:
         return jsonify({"status": "error", "message": "未接收到檔案"}), 400
 
@@ -163,7 +193,6 @@ def upload_async():
 
     if file:
         img_bytes = file.read()
-
         base64_str = base64.b64encode(img_bytes).decode('utf-8')
         mime_type = file.mimetype or 'image/jpeg'
         image_data_uri = f"data:{mime_type};base64,{base64_str}"
@@ -187,6 +216,19 @@ def upload_async():
                 try:
                     predictions = analyze_catch_image(raw_bytes)
 
+                    # 👉 整合同學的：如果判斷不是魚，直接更新資料庫為 not_fish 並中斷
+                    if predictions and predictions[0].get("is_fish") == False:
+                        record.status = 'not_fish'
+                        db.session.commit()
+                        return
+
+                    # 👉 整合同學的：如果判斷不是台灣魚，更新資料庫為 not_TW_fish 並中斷
+                    if predictions and predictions[0].get("is_TW_fish") == False:
+                        record.status = 'not_TW_fish'
+                        db.session.commit()
+                        return
+
+                    # 正常魚類處理邏輯
                     if predictions:
                         best_match = predictions[0]
                         record.fish_type = f"{best_match['name']} (信心度: {best_match['score']*100:.1f}%)"
@@ -215,19 +257,21 @@ def upload_async():
         })
 
 
-@app.route('/api/check_task/<task_id>')
+@app.route('/api/picture/check_task/<task_id>')
 def check_task(task_id):
+    # 改回從資料庫查詢最新狀態
     record = FishRecord.query.get(task_id)
     if not record:
         return jsonify({"status": "not_found"})
 
+    # 👉 讓前端的 script.js 也能正確收到 not_fish 狀態
     return jsonify({
         "status": record.status,
         "fish_name": record.fish_type
     })
 
 
-@app.route('/result/<task_id>')
+@app.route('/api/picture/result/<task_id>')
 def result_page(task_id):
     record = FishRecord.query.get(task_id)
     if not record or record.status != 'completed':
@@ -243,5 +287,4 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         print("✅ 資料庫初始化完成！")
-
     app.run(port=8000, debug=True)
