@@ -8,3 +8,6 @@ google-generativeai
 google-cloud-vision
 ultralytics
 markdown
+psycopg2-binary
+langchain-google-genai
+langchain-core

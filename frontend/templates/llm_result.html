@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="zh-Hant">
+<<<<<<< HEAD
     <head>
         <meta charset="UTF-8" />
         <title>AI 回答結果</title>
@@ -203,3 +204,101 @@
         </script>
     </body>
 </html>
+=======
+	<head>
+		<meta charset="UTF-8" />
+		<title>AI 回答結果</title>
+		<style>
+			body {
+				background-color: #e0f7fa;
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				min-height: 100vh;
+				font-family: sans-serif;
+				margin: 0;
+			}
+			.card {
+				background: white;
+				padding: 2rem;
+				border-radius: 15px;
+				text-align: center;
+				width: 80%;
+				max-width: 600px;
+				box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+			}
+			.question-box {
+				margin-top: 10px;
+				padding: 15px;
+				background-color: #e3f2fd;
+				border-radius: 10px;
+				text-align: left;
+				color: #1565c0;
+				font-weight: bold;
+				font-size: 1.1rem;
+			}
+			.answer-box {
+				margin-top: 20px;
+				padding: 20px;
+				background-color: #f1f8e9;
+				border-radius: 10px;
+				text-align: left;
+				color: #424242;
+				line-height: 1.8;
+				border-left: 5px solid #8bc34a;
+				font-size: 1rem;
+				white-space: pre-wrap; /* 讓 AI 的換行能正常顯示 */
+			}
+			.back-btn {
+				display: inline-block;
+				margin-top: 25px;
+				padding: 10px 20px;
+				background-color: #00acc1;
+				color: white;
+				text-decoration: none;
+				border-radius: 20px;
+				font-weight: bold;
+				transition: 0.3s;
+			}
+			.back-btn:hover {
+				background-color: #00838f;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="card">
+			<h2>✨ AI 回答完畢！</h2>
+
+			<div class="question-box">
+				你的問題：<br />
+				<span
+					style="
+						color: #333;
+						font-weight: normal;
+						display: inline-block;
+						margin-top: 5px;
+					"
+					>{{ question }}</span
+				>
+			</div>
+
+			<div class="answer-box">
+				<strong> AI 的回答：</strong>
+				<div style="margin-top: 10px">{{ reply | safe }}</div>
+			</div>
+
+			<div class="last_asking">
+				<input
+					id="middle-input"
+					type="text"
+					placeholder="輸入問題詢問 AI..."
+				/>
+				<button id="require-LLM-button">傳送</button>
+			</div>
+
+			<br />
+			<a href="/" class="back-btn">回到主畫面</a>
+		</div>
+	</body>
+</html>
+>>>>>>> feature/db-reset
