@@ -35,7 +35,7 @@ def analyze_catch_image(image_path):
         # 設定系統提示詞，嚴格要求 AI 吐出乾淨的 JSON
         prompt = """你是一個專業的台灣魚類辨識專家。請先判斷圖片中的主體是否為「魚類」且是否為「台灣可釣到的魚種」。
         如果圖片中【有魚類】並且是【台灣可釣到的魚種】，請回傳：{"is_fish": true,"is_TW_fish": true, "name": "魚的中文名稱", "score": 0.98, "description": "關於這條魚的簡短介紹"}
-        如果圖片中【有魚類】但不是【台灣可釣到的魚種】，請回傳：{"is_fish": true,"is_TW_fish": false, "name": "魚的中文名稱", "score": 0.98, "description": "關於這條魚的簡短介紹"}
+        如果圖片中【有魚類】但不是【台灣可釣到的魚種】，請回傳：{"is_fish": true,"is_TW_fish": false, "name": "魚的中文名稱", "score": 0.0, "description": "這是不台灣可釣到的魚種"}
         如果圖片中【沒有魚類】(例如是鳥、貓、狗、人或風景)，請回傳：{"is_fish": false,"is_TW_fish": false, "name": "非魚類", "score": 0.0, "description": "這不是魚"}
         絕對不要有任何 Markdown 標記 (例如 ```json)，只要純 JSON 字串。"""
 
@@ -60,6 +60,7 @@ def analyze_catch_image(image_path):
         # 將結果包裝成 app.py 期待的 List 格式
         predictions = [{
             "is_fish": result_json.get("is_fish", True),
+            "is_TW_fish": result_json.get("is_TW_fish", True),
             "name": result_json.get("name", "未知魚種"),
             "score": result_json.get("score", 0.0),
             "description": result_json.get("description", "無詳細介紹")

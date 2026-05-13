@@ -272,6 +272,23 @@ def upload_async():
                     # 3. 🚨 在這裡直接 return，下面的 DB 存檔邏輯就絕對不會執行到！
                     return
                 
+                if predictions and predictions[0].get("is_TW_fish") == False:
+                    print(f"⚠️ 偵測到非台灣魚種照片，任務 ID: {tid}")
+                    
+                    # 1. 把狀態標記為 "not_TW_fish"，讓前端知道
+                    recognition_results[tid] = {
+                        "status": "not_TW_fish",
+                        "error_message": "請上傳台灣可釣到的魚種照片"
+                    }
+                    
+                    # 2. 刪除剛剛存在資料夾裡的非台灣魚照片，不佔空間
+                    import os
+                    if os.path.exists(path):
+                        os.remove(path)
+                        
+                    # 3. 🚨 在這裡直接 return，下面的 DB 存檔邏輯就絕對不會執行到！
+                    return
+                
                 if predictions:
                     # 取得信心指數最高的結果
                     best_match = predictions[0]

@@ -3,6 +3,7 @@ from google import genai
 from google.genai import types
 from dotenv import load_dotenv
 
+
 # 確保環境變數有被載入
 load_dotenv()
 
