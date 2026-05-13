@@ -243,6 +243,16 @@ def llm_result_page(task_id):
     if not result or result['status'] != 'completed':
         return redirect(url_for('home'))
 
+    # ==========================================
+    # 🧠 關鍵修復：在這裡把「第一回合」的對話存入 Session 記憶！
+    # 因為這是普通的網頁路由，可以直接操作瀏覽器的 Cookie
+    # ==========================================
+    session['chat_history'] = [
+        {"role": "user", "content": result['question']},
+        {"role": "assistant", "content": result['reply']}
+    ]
+    session.modified = True  # 告訴 Flask 記憶有更新，務必存檔
+
     # 把問題和回答送去剛剛寫好的 llm_result.html
     return render_template('llm_result.html',
                            question=result['question'],
