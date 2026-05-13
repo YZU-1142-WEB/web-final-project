@@ -29,6 +29,7 @@ class GeminiService:
             "5. 語氣要專業且像一位資深的釣客前輩。"
         )
 
+    '''
     def chat(self, prompt: str):
         try:
             # 新版發送請求的寫法
@@ -41,6 +42,58 @@ class GeminiService:
             )
             return {"success": True, "reply": response.text}
         except Exception as e:
+            return {"success": False, "error": str(e)}
+    '''
+
+    def chat(self, prompt: str, history=None):
+        if history is None:
+            history = []
+            
+        try:
+            # 準備傳給 Gemini 的完整對話內容
+            contents = []
+
+            # 1. 載入之前的歷史紀錄
+            for msg in history:
+                # Flask Session 裡我們存 user/assistant，這裡要把它轉成 Google 需要的 user/model
+                role = "user" if msg["role"] == "user" else "model"
+                
+                contents.append(
+                    types.Content(
+                        role=role,
+                        parts=[types.Part.from_text(text=msg["content"])]
+                    )
+                )
+
+            # 2. 加入這次最新輸入的問題
+            contents.append(
+                types.Content(
+                    role="user",
+                    parts=[types.Part.from_text(text=prompt)]
+                )
+            )
+
+            # 3. 發送帶有記憶的請求
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    system_instruction=self.system_instruction
+                )
+            )
+            return {"success": True, "reply": response.text}
+            
+        except Exception as e:
+            error_msg = str(e)
+            print(f"❌ Gemini API 發生錯誤: {e}")
+
+            #  攔截 429 頻率限制錯誤
+            if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
+                return {
+                    "success": False, 
+                    "error": "AI 稍微喘口氣中！ 您問得太快了，請等待 1 分鐘後再繼續發問。"
+                }
+
             return {"success": False, "error": str(e)}
 
 

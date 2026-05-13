@@ -1,7 +1,10 @@
-Flask
-Flask-Cors
-Flask-SQLAlchemy
+flask
+flask-cors
+flask-sqlalchemy
 python-dotenv
-google-genai
+langchain-google-genai
+langchain_core
+google-generativeai
 google-cloud-vision
 ultralytics
+markdown

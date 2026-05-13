@@ -130,23 +130,51 @@ def logout():
 def chat_endpoint():
     if 'username' not in session:
         return jsonify({"success": False, "error": "請先登入"}), 401
+    
     data = request.get_json()
     user_message = data.get('input_text')
+    
     if not user_message:
         return jsonify({"success": False, "error": "請提供問題"}), 400
-    result = llm_service.chat(user_message)
+
+    # ==========================================
+    # 🧠 記憶體處理區塊
+    # ==========================================
+    
+    # 1. 如果 Session 裡還沒有聊天紀錄，就開一個空的 list 給它
+    if 'chat_history' not in session:
+        session['chat_history'] = []
+
+    # 2. 呼叫 AI，記得把歷史紀錄 (session['chat_history']) 一起傳進去
+    result = llm_service.chat(user_message, history=session['chat_history'])
 
     if result["success"]:
+        ai_reply = result["reply"]
+        
+        # 3. 把「這次的問題」和「AI 的回答」都存進 Session 裡
+        session['chat_history'].append({"role": "user", "content": user_message})
+        session['chat_history'].append({"role": "assistant", "content": ai_reply})
+        
+        # 🚨【工程師防呆重點】🚨
+        # Flask 的預設 Session 是存在 Cookie 裡的，容量上限只有 4KB！
+        # 聊太久如果爆掉會報錯，所以我們強制只保留「最後 10 筆對話」(等於最後 5 次問答)
+        if len(session['chat_history']) > 10:
+            session['chat_history'] = session['chat_history'][-10:]
+            
+        # 告訴 Flask Session 內容有被修改，必須要重新儲存
+        session.modified = True 
+        
+        # 將 Markdown 轉 HTML 後回傳
+        html_reply = markdown.markdown(ai_reply, extensions=['nl2br'])
         return jsonify({
             "success": True,
-            "reply": result["reply"]
+            "reply": html_reply
         })
     else:
         return jsonify({
             "success": False,
             "error": result["error"]
         }), 500
-
 
 # 準備一個新的字典來裝 LLM 的任務狀態
 llm_tasks = {}
@@ -248,6 +276,40 @@ def upload_async():
             try:
                 # 呼叫剛剛寫好的辨識函式
                 predictions = analyze_catch_image(path)
+
+                if predictions and predictions[0].get("is_fish") == False:
+                    print(f"⚠️ 偵測到非魚類照片，任務 ID: {tid}")
+                    
+                    # 1. 把狀態標記為 "not_fish"，讓前端知道
+                    recognition_results[tid] = {
+                        "status": "not_fish",
+                        "error_message": "請上傳魚的照片"
+                    }
+                    
+                    # 2. 刪除剛剛存在資料夾裡的鳥/風景照片，不佔空間
+                    import os
+                    if os.path.exists(path):
+                        os.remove(path)
+                        
+                    # 3. 🚨 在這裡直接 return，下面的 DB 存檔邏輯就絕對不會執行到！
+                    return
+                
+                if predictions and predictions[0].get("is_TW_fish") == False:
+                    print(f"⚠️ 偵測到非台灣魚種照片，任務 ID: {tid}")
+                    
+                    # 1. 把狀態標記為 "not_TW_fish"，讓前端知道
+                    recognition_results[tid] = {
+                        "status": "not_TW_fish",
+                        "error_message": "請上傳台灣可釣到的魚種照片"
+                    }
+                    
+                    # 2. 刪除剛剛存在資料夾裡的非台灣魚照片，不佔空間
+                    import os
+                    if os.path.exists(path):
+                        os.remove(path)
+                        
+                    # 3. 🚨 在這裡直接 return，下面的 DB 存檔邏輯就絕對不會執行到！
+                    return
                 
                 if predictions:
                     # 取得信心指數最高的結果
