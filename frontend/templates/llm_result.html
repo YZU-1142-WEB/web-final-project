@@ -58,29 +58,148 @@
             .back-btn:hover {
                 background-color: #00838f;
             }
+            /* 這是新增的下層輸入框樣式 */
+            .last_asking {
+                display: flex;
+                margin-top: 30px;
+                background-color: #f5f5f5;
+                border-radius: 30px;
+                padding: 5px 15px;
+                box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+            }
+            #middle-input {
+                flex-grow: 1;
+                border: none;
+                outline: none;
+                background: transparent;
+                padding: 10px;
+                font-size: 1rem;
+            }
+            #require-LLM-button {
+                background-color: #00acc1;
+                color: white;
+                border: none;
+                border-radius: 20px;
+                padding: 8px 20px;
+                cursor: pointer;
+                font-weight: bold;
+                transition: 0.3s;
+            }
+            #require-LLM-button:hover {
+                background-color: #00838f;
+            }
+            .thinking-box {
+                margin-top: 20px;
+                color: #00acc1;
+                font-style: italic;
+                text-align: center;
+            }
         </style>
     </head>
     <body>
         <div class="card">
             <h2>✨ AI 回答完畢！</h2>
             
-            <div class="question-box">
-                 你的問題：<br>
-                <span style="color: #333; font-weight: normal; display: inline-block; margin-top: 5px;">{{ question }}</span>
-            </div>
+            <div id="chat-container">
+                <div class="question-box">
+                    🗣️ 你的問題：<br>
+                    <span style="color: #333; font-weight: normal; display: inline-block; margin-top: 5px;">{{ question }}</span>
+                </div>
 
-            <div class="answer-box">
-                <strong>  AI 的回答：</strong>
-                <div style="margin-top: 10px;">{{ reply | safe }}</div>
+                <div class="answer-box">
+                    <strong>🤖 AI 的回答：</strong>
+                    <div style="margin-top: 10px;">{{ reply | safe }}</div>
+                </div>
             </div>
 
             <div class="last_asking">
-                <input id="middle-input" type="text" placeholder="輸入問題詢問 AI..." />
-			    <button id="require-LLM-button">傳送</button>
+                <input id="middle-input" type="text" placeholder="繼續追問 AI..." />
+                <button id="require-LLM-button">傳送</button>
             </div>
 
             <br />
             <a href="/" class="back-btn">回到主畫面</a>
         </div>
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                const inputBtn = document.getElementById("require-LLM-button");
+                const inputField = document.getElementById("middle-input");
+                const chatContainer = document.getElementById("chat-container");
+
+                async function askFollowUpQuestion() {
+                    const text = inputField.value.trim();
+                    if (!text) return;
+
+                    // 1. 禁用輸入框，避免重複送出
+                    inputField.value = "";
+                    inputField.disabled = true;
+                    inputBtn.disabled = true;
+                    inputBtn.innerText = "思考中...";
+
+                    // 2. 把使用者的「新問題」加到畫面上
+                    const newQuestionHtml = `
+                        <div class="question-box">
+                            🗣️ 你的問題：<br>
+                            <span style="color: #333; font-weight: normal; display: inline-block; margin-top: 5px;">${text}</span>
+                        </div>
+                    `;
+                    chatContainer.insertAdjacentHTML('beforeend', newQuestionHtml);
+
+                    // 3. 加上「AI 思考中」的佔位動畫
+                    const loadingId = "loading-" + Date.now();
+                    const loadingHtml = `<div id="${loadingId}" class="thinking-box">🤖 AI 正在拼命打字中...</div>`;
+                    chatContainer.insertAdjacentHTML('beforeend', loadingHtml);
+
+                    // 自動捲動到最下面
+                    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+
+                    try {
+                        // 4. 發送請求給後端的 /api/LLM
+                        const response = await fetch('/api/LLM', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ input_text: text })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        // 移除「思考中」文字
+                        document.getElementById(loadingId).remove();
+
+                        if (response.ok && data.success) {
+                            // 5. 把 AI 的「新回答」加到畫面上
+                            const newAnswerHtml = `
+                                <div class="answer-box">
+                                    <strong>🤖 AI 的回答：</strong>
+                                    <div style="margin-top: 10px;">${data.reply}</div>
+                                </div>
+                            `;
+                            chatContainer.insertAdjacentHTML('beforeend', newAnswerHtml);
+                        } else {
+                            alert("❌ 發生錯誤: " + (data.error || "未知錯誤"));
+                        }
+                    } catch (error) {
+                        console.error("連線錯誤:", error);
+                        document.getElementById(loadingId)?.remove();
+                        alert("❌ 連線伺服器失敗，請檢查網路！");
+                    }
+
+                    // 6. 恢復輸入框狀態
+                    inputField.disabled = false;
+                    inputBtn.disabled = false;
+                    inputBtn.innerText = "傳送";
+                    inputField.focus();
+                    
+                    // 再次自動捲動到最下面
+                    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                }
+
+                // 綁定「點擊傳送按鈕」與「按下 Enter 鍵」事件
+                inputBtn.addEventListener("click", askFollowUpQuestion);
+                inputField.addEventListener("keypress", (e) => {
+                    if (e.key === "Enter") askFollowUpQuestion();
+                });
+            });
+        </script>
     </body>
 </html>

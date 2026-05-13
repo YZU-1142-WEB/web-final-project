@@ -115,7 +115,19 @@
 				btn.innerText = originalText;
 				btn.disabled = false;
 				statusText.style.display = "none";
-			} else {
+			} else if (data.status === "not_fish") {
+
+                            localStorage.removeItem("fish_task_id"); // 清除任務紀錄
+                            
+                            // 彈出警告視窗
+                            alert("❌ 上傳失敗：請上傳魚的照片！");
+
+							// 2. 恢復按鈕與提示文字的狀態，讓使用者可以馬上重傳一張新照片
+							btn.innerText = originalText;
+							btn.disabled = false;
+							statusText.style.display = "none";
+                            
+            } else {
 				// ⏳ 還在處理中 (processing)，加個點點點讓畫面有動態感
 				statusText.innerText += " .";
 				// 等 1 秒後再問一次

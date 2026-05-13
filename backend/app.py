@@ -130,16 +130,22 @@ def logout():
 def chat_endpoint():
     if 'username' not in session:
         return jsonify({"success": False, "error": "請先登入"}), 401
+    
     data = request.get_json()
     user_message = data.get('input_text')
+    
     if not user_message:
         return jsonify({"success": False, "error": "請提供問題"}), 400
+        
+    # 呼叫 AI
     result = llm_service.chat(user_message)
 
     if result["success"]:
+        # 👉 將 Markdown 轉換為 HTML，保持排版漂亮
+        html_reply = markdown.markdown(result["reply"], extensions=['nl2br'])
         return jsonify({
             "success": True,
-            "reply": result["reply"]
+            "reply": html_reply
         })
     else:
         return jsonify({
@@ -248,6 +254,23 @@ def upload_async():
             try:
                 # 呼叫剛剛寫好的辨識函式
                 predictions = analyze_catch_image(path)
+
+                if predictions and predictions[0].get("is_fish") == False:
+                    print(f"⚠️ 偵測到非魚類照片，任務 ID: {tid}")
+                    
+                    # 1. 把狀態標記為 "not_fish"，讓前端知道
+                    recognition_results[tid] = {
+                        "status": "not_fish",
+                        "error_message": "請上傳魚的照片"
+                    }
+                    
+                    # 2. 刪除剛剛存在資料夾裡的鳥/風景照片，不佔空間
+                    import os
+                    if os.path.exists(path):
+                        os.remove(path)
+                        
+                    # 3. 🚨 在這裡直接 return，下面的 DB 存檔邏輯就絕對不會執行到！
+                    return
                 
                 if predictions:
                     # 取得信心指數最高的結果
