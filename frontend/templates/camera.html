@@ -1,47 +1,54 @@
-<div class="card">
-	<h1>恭喜上魚，{{ session['username'] }}！</h1>
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Document</title>
+		<style>
+			.card {
+				margin: 20px 0;
+				border: 2px dashed #00acc1;
+				padding: 20px;
+				border-radius: 10px;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="card">
+			<h1>恭喜上魚，{{ session['username'] }}！</h1>
+			<h3>📸 上傳魚類照片</h3>
+			<form id="uploadForm">
+				<input
+					type="file"
+					id="fileInput"
+					name="file"
+					accept="image/*"
+					required
+				/>
+				<br /><br />
+				<button
+					type="button"
+					onclick="handleUpload()"
+					id="submitBtn"
+					style="
+						background: #00acc1;
+						color: white;
+						border: none;
+						padding: 10px 20px;
+						border-radius: 5px;
+						cursor: pointer;
+					"
+				>
+					開始 AI 辨識
+				</button>
+			</form>
 
-	<div
-		style="
-			margin: 20px 0;
-			border: 2px dashed #00acc1;
-			padding: 20px;
-			border-radius: 10px;
-		"
-	>
-		<h3>📸 上傳魚類照片</h3>
-
-		<form id="uploadForm">
-			<input
-				type="file"
-				id="fileInput"
-				name="file"
-				accept="image/*"
-				required
-			/>
-			<br /><br />
-			<button
-				type="button"
-				onclick="handleUpload()"
-				id="submitBtn"
-				style="
-					background: #00acc1;
-					color: white;
-					border: none;
-					padding: 10px 20px;
-					border-radius: 5px;
-					cursor: pointer;
-				"
-			>
-				開始 AI 辨識
-			</button>
-		</form>
-
-		<p id="statusText" style="display: none; color: #00acc1">
-			正在上傳並準備回首頁...
-		</p>
-	</div>
-</div>
+			<p id="statusText" style="display: none; color: #00acc1">
+				正在上傳並準備回首頁...
+			</p>
+		</div>
+	</body>
+</html>
 
 <script>
 	async function handleUpload() {
@@ -81,6 +88,7 @@
 				btn.innerText = "AI 辨識中...";
 				statusText.innerText = "照片已上傳！AI 正在分析中... 🐟";
 				const taskId = result.task_id;
+				localStorage.setItem("fish_task_id", taskId);
 
 				// 啟動輪詢檢查
 				checkTaskStatus(taskId, btn, originalText, statusText);
@@ -115,26 +123,24 @@
 				btn.innerText = originalText;
 				btn.disabled = false;
 				statusText.style.display = "none";
-			} else if (data.status === "not_fish") {
+			} else if (
+				data.status === "not_fish" ||
+				data.status === "not_TW_fish"
+			) {
 				localStorage.removeItem("fish_task_id"); // 清除任務紀錄
+				const errorMsg =
+					data.status === "not_fish"
+						? "❌ 上傳失敗：請上傳魚的照片！"
+						: "❌ 上傳失敗：請上傳台灣可釣到的魚種照片！";
 
 				// 彈出警告視窗
-				alert("❌ 上傳失敗：請上傳魚的照片！");
+				alert(errorMsg);
 
 				// 2. 恢復按鈕與提示文字的狀態，讓使用者可以馬上重傳一張新照片
 				btn.innerText = originalText;
 				btn.disabled = false;
 				statusText.style.display = "none";
-			} else if (data.status === "not_TW_fish") {
-				localStorage.removeItem("fish_task_id"); // 清除任務紀錄
-
-				// 彈出警告視窗
-				alert("❌ 上傳失敗：請上傳台灣可釣到的魚種照片！");
-
-				// 2. 恢復按鈕與提示文字的狀態，讓使用者可以馬上重傳一張新照片
-				btn.innerText = originalText;
-				btn.disabled = false;
-				statusText.style.display = "none";
+				document.getElementById("fileInput").value = "";
 			} else {
 				// ⏳ 還在處理中 (processing)，加個點點點讓畫面有動態感
 				statusText.innerText += " .";
