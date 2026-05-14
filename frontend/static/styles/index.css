@@ -36,7 +36,7 @@ body {
 
 .top-content {
     flex: 5;
-    background-color: #fff;
+    background-color: #858282;
 }
 
 /* 頂部橫線與按鈕區域 */
@@ -107,8 +107,6 @@ body {
     margin: 2px auto;
 }
 
-/* --- 其他元素美化 --- */
-
 #middle-input {
     width: 600px;
     height: 50px;
@@ -124,18 +122,19 @@ body {
     border-color: var(--primary-blue); /* 點擊時變藍色 */
 }
 
-
-
-#bottom-container {
+#fish-container {
     width: 620px;
     height: 60px;
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
     align-items: center;
+    gap: 12px;
+    margin: 20px 0;
 }
 
-#bottom-button {
+#random-button {
     padding: 10px 25px;
+    margin: 30px;;
     background-color: var(--primary-blue);
     color: white;
     border: none;
@@ -145,8 +144,28 @@ body {
     transition: background-color 0.3s;
 }
 
-#bottom-button:hover {
+#random-button:hover {
     background-color: var(--dark-blue);
+}
+
+#display-area {
+    width: 180px;
+    height: 40px;
+    background-color: #ffffff;
+    
+    /* 文字排版：靠左對齊 */
+    text-align: left;
+    padding-left: 15px;        /* 文字靠左的間距 */
+    line-height: 40px;         /* 垂直置中 (與 height 相同) */
+    
+    /* 字體樣式 */
+    font-weight: bold;
+    font-size: 16px;
+    
+    /* 防止文字溢出 */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 #tidal-chart {

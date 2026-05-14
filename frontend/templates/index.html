@@ -36,12 +36,16 @@
 			<button id="require-LLM-button">傳送</button>
 		</div>
 
-		<div id="bottom-container" class="container">
-			<button id="bottom-button">傳送</button>
-		</div>
+		<div id="fish-container" class="container">
+        	<div id="display-area">準備抽魚...</div>
+        	<button id="random-button">開抽</button>
+   		 </div>
 
 		<div id="tidal-chart" class="container"></div>
 		<a href="{{ url_for('logout') }}">登出</a>
+		
+		<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+		<script src="{{ url_for('static', filename='random.js') }}"></script>
 
 		<script src="{{ url_for('static', filename='script.js') }}"></script>
 
