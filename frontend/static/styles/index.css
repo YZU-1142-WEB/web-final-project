@@ -149,9 +149,34 @@ body {
     background-color: var(--dark-blue);
 }
 
+/* 潮汐圖卡片 */
+
+#tidal-chart-container {
+
+    width: 90%;
+    max-width: 1200px;
+
+    height: 500px;
+
+    margin: 30px auto;
+
+    padding: 20px;
+
+    border-radius: 20px;
+
+    background: rgba(255,255,255,0.08);
+
+    backdrop-filter: blur(10px);
+
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+
+    overflow: hidden;
+}
+
+/* Plotly 畫圖區 */
+
 #tidal-chart {
-    width: 620px;
-    height: 200px;
-    background: linear-gradient(180deg, #ffffff 0%, #e3f2fd 100%); /* 淡淡的藍色漸層 */
-    border: 1px solid var(--border-color);
+
+    width: 100%;
+    height: 100%;
 }
