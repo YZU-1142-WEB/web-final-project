@@ -11,3 +11,4 @@ markdown
 psycopg2-binary
 langchain-google-genai
 langchain-core
+requests

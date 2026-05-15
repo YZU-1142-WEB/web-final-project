@@ -1,15 +1,26 @@
 import os
+import math
 import base64
 import threading
 import uuid
 import markdown
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask, render_template, redirect, url_for, request, session, flash, jsonify
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 from LLM.LLM import llm_service
 from image_identify.image_identify import analyze_catch_image
+import requests
+from flask import Flask, jsonify
+import urllib3
+import traceback
+import json
+import time
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+cwa_cache_data = None
+cwa_cache_time = 0
 
 load_dotenv()
 
@@ -112,7 +123,111 @@ def logout():
     flash("您已成功登出")
     return redirect(url_for('login'))
 
+@app.route('/api/get_tidal_data')
+def get_tidal_data():
+    global cwa_cache_data, cwa_cache_time
+    
+    API_KEY = 'CWA-762AFC9F-FA10-4125-B0B6-07B4D525B827'
+    DATASET_ID = 'F-A0021-001'
+    STATION_NAME = request.args.get('station', '基隆市中正區')
 
+    url = f'https://opendata.cwa.gov.tw/api/v1/rest/datastore/{DATASET_ID}?Authorization={API_KEY}'
+
+    try:
+        current_time = time.time()
+        
+        # 💡 核心升級：如果暫存是空的，或者距離上次下載已經超過 1 小時 (3600秒)，才重新下載
+        if cwa_cache_data is None or (current_time - cwa_cache_time > 3600):
+            print("向氣象署發送請求，下載最新潮汐資料中...")
+            # 💡 把 timeout 延長到 30 秒，給氣象署多一點時間準備大檔案
+            response = requests.get(url, verify=False, timeout=30)
+            response.raise_for_status()
+            
+            # 將下載好的龐大資料存進記憶體中
+            cwa_cache_data = response.json()
+            cwa_cache_time = current_time
+        else:
+            # 開發時可以看終端機印出這行，代表成功秒抓暫存資料！
+            print(f"使用暫存資料擷取：{STATION_NAME}")
+
+        # 使用暫存的資料來進行後續處理
+        data = cwa_cache_data
+
+        records = data.get('records', {})
+        tide_forecasts = records.get('TideForecasts', [])
+
+        times = []
+        heights = []
+        found_station = False
+
+        # =========================
+        # 開始解析資料 (這裡跟你原本寫的一模一樣)
+        # =========================
+        for forecast in tide_forecasts:
+            locations = forecast.get('Location', [])
+            if isinstance(locations, dict):
+                locations = [locations]
+
+            for location in locations:
+                location_name = location.get('LocationName', '')
+
+                if STATION_NAME not in location_name:
+                    continue
+
+                found_station = True
+                time_periods = location.get('TimePeriods', {})
+                dailies = time_periods.get('Daily', [])
+
+                if isinstance(dailies, dict):
+                    dailies = [dailies]
+
+                for daily in dailies:
+                    time_list = daily.get('Time', [])
+                    if isinstance(time_list, dict):
+                        time_list = [time_list]
+
+                    for t in time_list:
+                        dt = t.get('DateTime')
+                        tide_heights = t.get('TideHeights', {})
+                        height = tide_heights.get('AboveTWVD')
+
+                        if dt and height is not None:
+                            times.append(dt)
+                            try:
+                                heights.append(float(height))
+                            except ValueError:
+                                heights.append(0)
+
+        if not found_station:
+            return jsonify({'success': False, 'message': f'氣象署目前無提供此區資料：{STATION_NAME}'})
+        if not times:
+            return jsonify({'success': False, 'message': '找到測站，但沒有相對應的潮位資料'})
+
+        # =========================
+        # 資料排序 (防毛線球)
+        # =========================
+        tide_pairs = zip(times, heights)
+        sorted_pairs = sorted(tide_pairs)
+        times, heights = zip(*sorted_pairs) if sorted_pairs else ([], [])
+        
+        times = list(times)
+        heights = list(heights)
+
+        return jsonify({
+            'success': True,
+            'station_name': STATION_NAME,
+            'times': times,
+            'heights': heights
+        })
+
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'message': f"連線氣象署發生錯誤，請稍後再試 ({str(e)})"
+        })
+        
+    
 # ==========================================
 # LLM 聊天室路由 (保留同學的非同步機制)
 # ==========================================
@@ -281,7 +396,6 @@ def result_page(task_id):
                            img_file=record.image_url,
                            fish_name=record.fish_type,
                            description=record.description)
-
 
 if __name__ == '__main__':
     with app.app_context():
