@@ -226,6 +226,38 @@ def get_tidal_data():
             'success': False,
             'message': f"連線氣象署發生錯誤，請稍後再試 ({str(e)})"
         })
+    
+# ==========================================
+# LLM 判斷是否為合理釣點路由 
+# ==========================================
+    
+@app.route('/api/llm/validate_spot', methods=['POST'])
+def validate_spot():
+    if 'username' not in session:
+         return jsonify({"valid": False, "message": "請先登入"}), 401
+         
+    data = request.get_json()
+    spot_name = data.get('spot_name', '').strip()
+    
+    if not spot_name:
+        return jsonify({"valid": False, "message": "請輸入釣點名稱"})
+
+    # 嚴格要求 LLM 只回答 True 或 False
+    prompt = f"請判斷「{spot_name}」是否為一個合理的台灣釣魚地點（例如真實的地名、漁港、海灣、溪流、防波堤等）？請嚴格只回答 'True' 或 'False'，不要包含任何標點符號或其他說明文字。"
+    
+    try:
+        result = llm_service.chat(prompt)
+        if result.get("success"):
+            reply = result["reply"].strip().lower()
+            # 判斷 LLM 的回覆是否包含 true
+            if 'true' in reply:
+                return jsonify({"valid": True})
+            else:
+                return jsonify({"valid": False, "message": "請輸入正確釣點名稱"})
+        else:
+            return jsonify({"valid": False, "message": "LLM 驗證發生錯誤"})
+    except Exception as e:
+        return jsonify({"valid": False, "message": str(e)})
         
     
 # ==========================================
