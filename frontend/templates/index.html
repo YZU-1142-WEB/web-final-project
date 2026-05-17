@@ -41,6 +41,16 @@
 			<button id="bottom-button">傳送</button>
 		</div>
 
+		<!-- 新增：釣點輸入區塊 -->
+        <div class="input-group" style="margin-top: 20px;">
+            <input
+                id="spot-input"
+                type="text"
+                placeholder="輸入新增的釣點名稱 (例如: 野柳)"
+            />
+            <button id="add-spot-btn">加入釣點</button>
+        </div>
+
 		<div style="text-align: center; margin-top: 20px;">
 			<label for="county-selector" style="color: #fff; font-weight: bold; font-size: 18px; margin-right: 10px;">選擇縣市：</label>
 			<select id="county-selector" style="padding: 8px 15px; font-size: 16px; border-radius: 5px; cursor: pointer;">
@@ -319,5 +329,46 @@
 				}
 			});
 		</script>
+
+		<script>
+            // 綁定加入釣點按鈕事件
+            document.getElementById('add-spot-btn')?.addEventListener('click', async () => {
+                const spotName = document.getElementById('spot-input').value.trim();
+                if (!spotName) {
+                    alert('請輸入釣點名稱！');
+                    return;
+                }
+
+                const btn = document.getElementById('add-spot-btn');
+                const originalText = btn.innerText;
+                btn.innerText = 'AI 驗證釣點中...';
+                btn.disabled = true;
+
+                try {
+                    const response = await fetch('/api/llm/validate_spot', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ spot_name: spotName })
+                    });
+                    
+                    const data = await response.json();
+
+                    if (data.valid) {
+                        // 驗證成功：將釣點名稱存入瀏覽器，並跳轉至上傳頁
+                        localStorage.setItem('current_fishing_spot', spotName);
+                        window.location.href = "{{ url_for('camera_page') }}";
+                    } else {
+                        // 驗證失敗防呆
+                        alert(data.message || '請輸入正確釣點名稱');
+                    }
+                } catch (error) {
+                    console.error("驗證發生錯誤:", error);
+                    alert("連線發生錯誤，請稍後再試！");
+                } finally {
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                }
+            });
+        </script>
 	</body>
 </html>

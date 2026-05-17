@@ -46,6 +46,16 @@
 			<p id="statusText" style="display: none; color: #00acc1">
 				正在上傳並準備回首頁...
 			</p>
+
+			<!-- 新增：專屬釣點格子 (預設隱藏，若有釣點才會顯示) -->
+            <div id="spot-container" style="display: none; margin-top: 30px; padding: 15px; border: 2px solid #ff9800; border-radius: 10px; background: #fff8e1;">
+                <h3 id="spot-title" style="color: #e65100; margin-top: 0;"></h3>
+                <div style="text-align: center;">
+                    <img id="spot-preview" src="" alt="預覽圖片" style="max-width: 100%; border-radius: 8px; display: none; margin-top: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"/>
+                    <p id="preview-placeholder" style="color: #757575; font-size: 14px;">等待上傳圖片...</p>
+                </div>
+            </div>
+
 		</div>
 	</body>
 </html>
@@ -158,4 +168,39 @@
 			statusText.style.display = "none";
 		}
 	}
+</script>
+
+<script>
+    // 頁面載入時執行，負責處理釣點顯示與圖片即時預覽
+    document.addEventListener("DOMContentLoaded", () => {
+        // 從 localStorage 讀取剛剛加入的釣點
+        const spotName = localStorage.getItem("current_fishing_spot");
+        const spotContainer = document.getElementById("spot-container");
+        const spotTitle = document.getElementById("spot-title");
+        const fileInput = document.getElementById("fileInput");
+        const spotPreview = document.getElementById("spot-preview");
+        const previewPlaceholder = document.getElementById("preview-placeholder");
+
+        // 如果有釣點名稱，就把底下的格子顯示出來
+        if (spotName) {
+            spotContainer.style.display = "block";
+            spotTitle.innerText = `📍 釣點: ${spotName}`;
+        }
+
+        // 監聽使用者選擇檔案的動作，一選好檔案就馬上顯示預覽圖
+        if (fileInput) {
+            fileInput.addEventListener("change", function(event) {
+                const file = event.target.files[0];
+                if (file && spotName) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        spotPreview.src = e.target.result; // 將圖片來源設為選取的檔案
+                        spotPreview.style.display = "inline-block";
+                        previewPlaceholder.style.display = "none";
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+    });
 </script>
