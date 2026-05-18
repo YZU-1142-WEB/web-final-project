@@ -29,10 +29,15 @@ app = Flask(__name__, template_folder="../frontend/templates",
 app.secret_key = os.getenv("SECRET_KEY", "default_secret_key_for_dev")
 
 CORS(app)
-
+db_url = os.getenv('DATABASE_URL', 'sqlite:///fishdb.sqlite')
+db_url = db_url.replace("postgres://", "postgresql://", 1)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
     'DATABASE_URL', 'sqlite:///fishdb.sqlite')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_pre_ping': True,
+    'pool_recycle': 300
+}
 
 db = SQLAlchemy(app)
 
@@ -41,7 +46,7 @@ class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(20), unique=True, nullable=False)
-    password = db.Column(db.String(16), nullable=False)
+    password = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
@@ -123,10 +128,11 @@ def logout():
     flash("您已成功登出")
     return redirect(url_for('login'))
 
+
 @app.route('/api/get_tidal_data')
 def get_tidal_data():
     global cwa_cache_data, cwa_cache_time
-    
+
     API_KEY = 'CWA-762AFC9F-FA10-4125-B0B6-07B4D525B827'
     DATASET_ID = 'F-A0021-001'
     STATION_NAME = request.args.get('station', '基隆市中正區')
@@ -135,14 +141,14 @@ def get_tidal_data():
 
     try:
         current_time = time.time()
-        
+
         # 💡 核心升級：如果暫存是空的，或者距離上次下載已經超過 1 小時 (3600秒)，才重新下載
         if cwa_cache_data is None or (current_time - cwa_cache_time > 3600):
             print("向氣象署發送請求，下載最新潮汐資料中...")
             # 💡 把 timeout 延長到 30 秒，給氣象署多一點時間準備大檔案
             response = requests.get(url, verify=False, timeout=30)
             response.raise_for_status()
-            
+
             # 將下載好的龐大資料存進記憶體中
             cwa_cache_data = response.json()
             cwa_cache_time = current_time
@@ -209,7 +215,7 @@ def get_tidal_data():
         tide_pairs = zip(times, heights)
         sorted_pairs = sorted(tide_pairs)
         times, heights = zip(*sorted_pairs) if sorted_pairs else ([], [])
-        
+
         times = list(times)
         heights = list(heights)
 
@@ -226,25 +232,26 @@ def get_tidal_data():
             'success': False,
             'message': f"連線氣象署發生錯誤，請稍後再試 ({str(e)})"
         })
-    
+
 # ==========================================
-# LLM 判斷是否為合理釣點路由 
+# LLM 判斷是否為合理釣點路由
 # ==========================================
-    
+
+
 @app.route('/api/llm/validate_spot', methods=['POST'])
 def validate_spot():
     if 'username' not in session:
-         return jsonify({"valid": False, "message": "請先登入"}), 401
-         
+        return jsonify({"valid": False, "message": "請先登入"}), 401
+
     data = request.get_json()
     spot_name = data.get('spot_name', '').strip()
-    
+
     if not spot_name:
         return jsonify({"valid": False, "message": "請輸入釣點名稱"})
 
     # 嚴格要求 LLM 只回答 True 或 False
     prompt = f"請判斷「{spot_name}」是否為一個合理的台灣釣魚地點（例如真實的地名、漁港、海灣、溪流、防波堤等）？請嚴格只回答 'True' 或 'False'，不要包含任何標點符號或其他說明文字。"
-    
+
     try:
         result = llm_service.chat(prompt)
         if result.get("success"):
@@ -258,8 +265,8 @@ def validate_spot():
             return jsonify({"valid": False, "message": "LLM 驗證發生錯誤"})
     except Exception as e:
         return jsonify({"valid": False, "message": str(e)})
-        
-    
+
+
 # ==========================================
 # LLM 聊天室路由 (保留同學的非同步機制)
 # ==========================================
@@ -340,13 +347,20 @@ def upload_async():
 
     if file:
         img_bytes = file.read()
-        base64_str = base64.b64encode(img_bytes).decode('utf-8')
-        mime_type = file.mimetype or 'image/jpeg'
-        image_data_uri = f"data:{mime_type};base64,{base64_str}"
+        filename = f"{int(time.time())}_{file.filename}"
+        upload_dir = os.path.abspath(os.path.join(
+            app.root_path, "../frontend/static/upload"))
+        os.makedirs(upload_dir, exist_ok=True)
+        save_path = os.path.join(upload_dir, filename)
+
+        file.seek(0)
+        file.save(save_path)
+
+        img_url = f"/static/upload/{filename}"
 
         new_record = FishRecord(
             username=session['username'],
-            image_url=image_data_uri,
+            image_url=img_url,
             status='processing'
         )
         db.session.add(new_record)
@@ -390,9 +404,12 @@ def upload_async():
 
                 except Exception as e:
                     print(f"❌ 背景辨識錯誤: {e}")
-                    record.status = 'failed'
-                    record.fish_type = f"辨識失敗: {str(e)}"
-                    db.session.commit()
+                    db.session.rollback()
+                    record = FishRecord.query.get(tid)
+                    if record:
+                        record.status = 'failed'
+                        record.fish_type = f"辨識失敗: {str(e)}"
+                        db.session.commit()
 
         thread = threading.Thread(target=ai_worker, args=(task_id, img_bytes))
         thread.start()
@@ -428,6 +445,7 @@ def result_page(task_id):
                            img_file=record.image_url,
                            fish_name=record.fish_type,
                            description=record.description)
+
 
 if __name__ == '__main__':
     with app.app_context():
