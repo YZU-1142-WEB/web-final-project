@@ -7,7 +7,8 @@ import markdown
 from datetime import datetime, timedelta
 from flask import Flask, render_template, redirect, url_for, request, session, flash, jsonify
 from flask_cors import CORS
-from flask_sqlalchemy import SQLAlchemy
+import firebase_admin
+from firebase_admin import credentials, firestore
 from dotenv import load_dotenv
 from LLM.LLM import llm_service
 from image_identify.image_identify import analyze_catch_image
@@ -28,37 +29,16 @@ app = Flask(__name__, template_folder="../frontend/templates",
             static_folder="../frontend/static")
 app.secret_key = os.getenv("SECRET_KEY", "default_secret_key_for_dev")
 
+cred_path = os.getenv("FIREBASE_CRED_PATH", "firebase-key.json")
+try:
+    cred = credentials.Certificate(cred_path)
+    firebase_admin.initialize_app(cred)
+    db = firestore.client()
+    print("✅ Firebase Firestore 連線成功！")
+except Exception as e:
+    print(f"❌ Firebase 初始化失敗，請檢查金鑰檔案: {e}")
+
 CORS(app)
-db_url = os.getenv('DATABASE_URL', 'sqlite:///fishdb.sqlite')
-db_url = db_url.replace("postgres://", "postgresql://", 1)
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
-    'DATABASE_URL', 'sqlite:///fishdb.sqlite')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_pre_ping': True,
-    'pool_recycle': 300
-}
-
-db = SQLAlchemy(app)
-
-
-class User(db.Model):
-    __tablename__ = 'users'
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(20), unique=True, nullable=False)
-    password = db.Column(db.String(255), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-
-class FishRecord(db.Model):
-    __tablename__ = 'fish_records'
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(20), nullable=False)
-    image_url = db.Column(db.Text, nullable=False)
-    status = db.Column(db.String(20), default='processing')
-    fish_type = db.Column(db.String(100), nullable=True)
-    description = db.Column(db.Text, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 # ==========================================
 # 帳號系統與基本網頁路由
@@ -96,11 +76,18 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        user = User.query.filter_by(username=username).first()
-        if user and user.password == password:
-            session['username'] = user.username
-            session['user_id'] = user.id
-            return redirect(url_for('home'))
+        users_ref = db.collection('users')
+        query = users_ref.where('username', '==', username).limit(1).stream()
+        user_doc = None
+        for doc in query:
+            user_doc = doc
+            break
+        if user_doc:
+            user_data = user_doc.to_dict()
+            if user_data.get('password') == password:
+                session['username'] = user_data['username']
+                session['user_id'] = user_doc.id
+                return redirect(url_for('home'))
         flash("帳號或密碼錯誤")
     return render_template('login.html')
 
@@ -110,11 +97,18 @@ def register_page():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        existing_user = User.query.filter_by(username=username).first()
+        users_ref = db.collection('users')
+        query = users_ref.where('username', '==', username).limit(1).stream()
+        existing_user = None
+        for doc in query:
+            existing_user = doc
+            break
         if existing_user is None:
-            new_user = User(username=username, password=password)
-            db.session.add(new_user)
-            db.session.commit()
+            users_ref.add({
+                'username': username,
+                'password': password,
+                'created_at': firestore.SERVER_TIMESTAMP
+            })
             flash("註冊成功，請登入！")
             return redirect(url_for('login'))
         flash("該帳號已存在！")
@@ -357,63 +351,64 @@ def upload_async():
         file.save(save_path)
 
         img_url = f"/static/upload/{filename}"
+        _, doc_ref = db.collection('fish_records').add({
+            'username': session['username'],
+            'image_url': img_url,
+            'status': 'processing',
+            'fish_type': None,
+            'description': None,
+            'created_at': firestore.SERVER_TIMESTAMP
+        })
 
-        new_record = FishRecord(
-            username=session['username'],
-            image_url=img_url,
-            status='processing'
-        )
-        db.session.add(new_record)
-        db.session.commit()
-
-        task_id = new_record.id
+        # 💡 2. 拿 Firestore 自動產生的文件 ID 當作 task_id
+        task_id = doc_ref.id
 
         def ai_worker(tid, raw_bytes):
-            with app.app_context():
-                record = FishRecord.query.get(tid)
-                if not record:
+            import traceback  # 引入最詳盡的報錯工具
+            print(f"🟢 [任務 {tid}] 背景執行緒啟動！")
+
+            try:
+                record_ref = db.collection('fish_records').document(tid)
+                print(f"🟢 [任務 {tid}] 成功建立資料庫指標，準備呼叫 AI")
+
+                predictions = analyze_catch_image(raw_bytes)
+                print(f"🟢 [任務 {tid}] AI 分析完成，結果: {predictions}")
+
+                if predictions and predictions[0].get("is_fish") == False:
+                    print(f"🟢 [任務 {tid}] 判斷為非魚類，準備寫入 not_fish")
+                    record_ref.update({'status': 'not_fish'})
+                    print(f"🟢 [任務 {tid}] 寫入 not_fish 成功！")
                     return
 
+                if predictions and predictions[0].get("is_TW_fish") == False:
+                    print(f"🟢 [任務 {tid}] 判斷為非台灣魚類，準備寫入 not_TW_fish")
+                    record_ref.update({'status': 'not_TW_fish'})
+                    print(f"🟢 [任務 {tid}] 寫入 not_TW_fish 成功！")
+                    return
+
+                if predictions:
+                    best_match = predictions[0]
+                    score = float(best_match.get('score', 0.0))
+
+                    fish_type = f"{best_match.get('name', '未知魚種')} (信心度: {score*100:.1f}%)"
+                    description = best_match.get('description', '無詳細介紹')
+                    print(f"🟢 [任務 {tid}] 準備寫入成功狀態: {fish_type}")
+                else:
+                    fish_type = "圖片中未偵測到明顯魚類"
+                    description = "無法提供介紹"
+                    print(f"🟢 [任務 {tid}] 無法辨識，準備寫入完成狀態")
+            except Exception as e:
+                traceback.print_exc()
+
                 try:
-                    predictions = analyze_catch_image(raw_bytes)
-
-                    # 👉 整合同學的：如果判斷不是魚，直接更新資料庫為 not_fish 並中斷
-                    if predictions and predictions[0].get("is_fish") == False:
-                        record.status = 'not_fish'
-                        db.session.commit()
-                        return
-
-                    # 👉 整合同學的：如果判斷不是台灣魚，更新資料庫為 not_TW_fish 並中斷
-                    if predictions and predictions[0].get("is_TW_fish") == False:
-                        record.status = 'not_TW_fish'
-                        db.session.commit()
-                        return
-
-                    # 正常魚類處理邏輯
-                    if predictions:
-                        best_match = predictions[0]
-                        record.fish_type = f"{best_match['name']} (信心度: {best_match['score']*100:.1f}%)"
-                        record.description = best_match.get(
-                            'description', '無詳細介紹')
-                    else:
-                        record.fish_type = "圖片中未偵測到明顯魚類"
-                        record.description = "無法提供介紹"
-
-                    record.status = 'completed'
-                    db.session.commit()
-
-                except Exception as e:
-                    print(f"❌ 背景辨識錯誤: {e}")
-                    db.session.rollback()
-                    record = FishRecord.query.get(tid)
-                    if record:
-                        record.status = 'failed'
-                        record.fish_type = f"辨識失敗: {str(e)}"
-                        db.session.commit()
-
+                    record_ref.update({
+                        'status': 'failed',
+                        'fish_type': f"辨識發生系統錯誤: {str(e)}"
+                    })
+                except Exception as inner_e:
+                    print(f"❌ [任務 {tid}] 連寫入失敗狀態都失敗了: {inner_e}")
         thread = threading.Thread(target=ai_worker, args=(task_id, img_bytes))
         thread.start()
-
         return jsonify({
             "status": "success",
             "task_id": task_id,
@@ -423,32 +418,30 @@ def upload_async():
 
 @app.route('/api/picture/check_task/<task_id>')
 def check_task(task_id):
-    # 改回從資料庫查詢最新狀態
-    record = FishRecord.query.get(task_id)
-    if not record:
+    doc = db.collection('fish_records').document(task_id).get()
+    if not doc.exists:
         return jsonify({"status": "not_found"})
-
-    # 👉 讓前端的 script.js 也能正確收到 not_fish 狀態
+    record = doc.to_dict()
     return jsonify({
-        "status": record.status,
-        "fish_name": record.fish_type
+        "status": record.get('status'),
+        "fish_name": record.get('fish_type')
     })
 
 
 @app.route('/api/picture/result/<task_id>')
 def result_page(task_id):
-    record = FishRecord.query.get(task_id)
-    if not record or record.status != 'completed':
+    doc = db.collection('fish_records').document(task_id).get()
+    if not doc.exists:
         return redirect(url_for('home'))
-
+    record = doc.to_dict()
+    if record.get('status') != 'completed':
+        return redirect(url_for('home'))
     return render_template('result.html',
-                           img_file=record.image_url,
-                           fish_name=record.fish_type,
-                           description=record.description)
+                           img_file=record.get('image_url'),
+                           fish_name=record.get('fish_type'),
+                           description=record.get('description'))
 
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-        print("✅ 資料庫初始化完成！")
+    print("✅ 啟動 Flask 伺服器...")
     app.run(port=8000, debug=True)

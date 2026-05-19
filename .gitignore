@@ -12,3 +12,5 @@ env/
 
 instance/
 upload/
+
+firebase-key.json

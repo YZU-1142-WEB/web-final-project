@@ -1,14 +1,13 @@
 flask
 flask-cors
-flask-sqlalchemy
 python-dotenv
 langchain-google-genai
 langchain_core
 google-generativeai
 google-cloud-vision
 ultralytics
+firebase-admin
 markdown
-psycopg2-binary
 langchain-google-genai
 langchain-core
 requests

@@ -48,14 +48,39 @@
 			</p>
 
 			<!-- 新增：專屬釣點格子 (預設隱藏，若有釣點才會顯示) -->
-            <div id="spot-container" style="display: none; margin-top: 30px; padding: 15px; border: 2px solid #ff9800; border-radius: 10px; background: #fff8e1;">
-                <h3 id="spot-title" style="color: #e65100; margin-top: 0;"></h3>
-                <div style="text-align: center;">
-                    <img id="spot-preview" src="" alt="預覽圖片" style="max-width: 100%; border-radius: 8px; display: none; margin-top: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"/>
-                    <p id="preview-placeholder" style="color: #757575; font-size: 14px;">等待上傳圖片...</p>
-                </div>
-            </div>
-
+			<div
+				id="spot-container"
+				style="
+					display: none;
+					margin-top: 30px;
+					padding: 15px;
+					border: 2px solid #ff9800;
+					border-radius: 10px;
+					background: #fff8e1;
+				"
+			>
+				<h3 id="spot-title" style="color: #e65100; margin-top: 0"></h3>
+				<div style="text-align: center">
+					<img
+						id="spot-preview"
+						src=""
+						alt="預覽圖片"
+						style="
+							max-width: 100%;
+							border-radius: 8px;
+							display: none;
+							margin-top: 10px;
+							box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+						"
+					/>
+					<p
+						id="preview-placeholder"
+						style="color: #757575; font-size: 14px"
+					>
+						等待上傳圖片...
+					</p>
+				</div>
+			</div>
 		</div>
 	</body>
 </html>
@@ -120,16 +145,23 @@
 	// 這個函數會一直去問後端：「好了沒？」
 	async function checkTaskStatus(taskId, btn, originalText, statusText) {
 		try {
-			const response = await fetch(`/api/picture/check_task/${taskId}`);
+			const response = await fetch(
+				`/api/picture/check_task/${taskId}?t=${new Date().getTime()}`,
+			);
 			const data = await response.json();
 
 			if (data.status === "completed") {
-				// 🎉 辨識成功！自動跳轉到結果頁面
+				localStorage.removeItem("fish_task_id");
 				statusText.innerText = "🎉 辨識完成！準備跳轉...";
 				window.location.href = `/api/picture/result/${taskId}`;
 			} else if (data.status === "failed") {
-				// ❌ 辨識失敗
+				localStorage.removeItem("fish_task_id");
 				alert("辨識失敗：" + data.error_message);
+				btn.innerText = originalText;
+				btn.disabled = false;
+				statusText.style.display = "none";
+			} else if (data.status === "not_found") {
+				localStorage.removeItem("fish_task_id");
 				btn.innerText = originalText;
 				btn.disabled = false;
 				statusText.style.display = "none";
@@ -137,24 +169,18 @@
 				data.status === "not_fish" ||
 				data.status === "not_TW_fish"
 			) {
-				localStorage.removeItem("fish_task_id"); // 清除任務紀錄
+				localStorage.removeItem("fish_task_id");
 				const errorMsg =
 					data.status === "not_fish"
 						? "❌ 上傳失敗：請上傳魚的照片！"
 						: "❌ 上傳失敗：請上傳台灣可釣到的魚種照片！";
-
-				// 彈出警告視窗
 				alert(errorMsg);
-
-				// 2. 恢復按鈕與提示文字的狀態，讓使用者可以馬上重傳一張新照片
 				btn.innerText = originalText;
 				btn.disabled = false;
 				statusText.style.display = "none";
 				document.getElementById("fileInput").value = "";
 			} else {
-				// ⏳ 還在處理中 (processing)，加個點點點讓畫面有動態感
 				statusText.innerText += " .";
-				// 等 1 秒後再問一次
 				setTimeout(
 					() =>
 						checkTaskStatus(taskId, btn, originalText, statusText),
@@ -162,7 +188,6 @@
 				);
 			}
 		} catch (error) {
-			console.error("檢查狀態失敗:", error);
 			btn.innerText = originalText;
 			btn.disabled = false;
 			statusText.style.display = "none";
@@ -171,36 +196,38 @@
 </script>
 
 <script>
-    // 頁面載入時執行，負責處理釣點顯示與圖片即時預覽
-    document.addEventListener("DOMContentLoaded", () => {
-        // 從 localStorage 讀取剛剛加入的釣點
-        const spotName = localStorage.getItem("current_fishing_spot");
-        const spotContainer = document.getElementById("spot-container");
-        const spotTitle = document.getElementById("spot-title");
-        const fileInput = document.getElementById("fileInput");
-        const spotPreview = document.getElementById("spot-preview");
-        const previewPlaceholder = document.getElementById("preview-placeholder");
+	// 頁面載入時執行，負責處理釣點顯示與圖片即時預覽
+	document.addEventListener("DOMContentLoaded", () => {
+		// 從 localStorage 讀取剛剛加入的釣點
+		const spotName = localStorage.getItem("current_fishing_spot");
+		const spotContainer = document.getElementById("spot-container");
+		const spotTitle = document.getElementById("spot-title");
+		const fileInput = document.getElementById("fileInput");
+		const spotPreview = document.getElementById("spot-preview");
+		const previewPlaceholder = document.getElementById(
+			"preview-placeholder",
+		);
 
-        // 如果有釣點名稱，就把底下的格子顯示出來
-        if (spotName) {
-            spotContainer.style.display = "block";
-            spotTitle.innerText = `📍 釣點: ${spotName}`;
-        }
+		// 如果有釣點名稱，就把底下的格子顯示出來
+		if (spotName) {
+			spotContainer.style.display = "block";
+			spotTitle.innerText = `📍 釣點: ${spotName}`;
+		}
 
-        // 監聽使用者選擇檔案的動作，一選好檔案就馬上顯示預覽圖
-        if (fileInput) {
-            fileInput.addEventListener("change", function(event) {
-                const file = event.target.files[0];
-                if (file && spotName) {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        spotPreview.src = e.target.result; // 將圖片來源設為選取的檔案
-                        spotPreview.style.display = "inline-block";
-                        previewPlaceholder.style.display = "none";
-                    };
-                    reader.readAsDataURL(file);
-                }
-            });
-        }
-    });
+		// 監聽使用者選擇檔案的動作，一選好檔案就馬上顯示預覽圖
+		if (fileInput) {
+			fileInput.addEventListener("change", function (event) {
+				const file = event.target.files[0];
+				if (file && spotName) {
+					const reader = new FileReader();
+					reader.onload = function (e) {
+						spotPreview.src = e.target.result; // 將圖片來源設為選取的檔案
+						spotPreview.style.display = "inline-block";
+						previewPlaceholder.style.display = "none";
+					};
+					reader.readAsDataURL(file);
+				}
+			});
+		}
+	});
 </script>
