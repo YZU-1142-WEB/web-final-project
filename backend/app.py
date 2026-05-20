@@ -1,6 +1,4 @@
 import os
-import math
-import base64
 import threading
 import uuid
 import markdown
@@ -8,7 +6,7 @@ from datetime import datetime, timedelta
 from flask import Flask, render_template, redirect, url_for, request, session, flash, jsonify
 from flask_cors import CORS
 import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import credentials, firestore, storage
 from dotenv import load_dotenv
 from LLM.LLM import llm_service
 from image_identify.image_identify import analyze_catch_image
@@ -16,7 +14,6 @@ import requests
 from flask import Flask, jsonify
 import urllib3
 import traceback
-import json
 import time
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -29,16 +26,25 @@ app = Flask(__name__, template_folder="../frontend/templates",
             static_folder="../frontend/static")
 app.secret_key = os.getenv("SECRET_KEY", "default_secret_key_for_dev")
 
-cred_path = os.getenv("FIREBASE_CRED_PATH", "firebase-key.json")
+CORS(app)
+
+private_key = os.getenv('FIREBASE_PRIVATE_KEY').replace('\\n', '\n')
+cred_dict = {
+    "type": "service_account",
+    "project_id": os.getenv("FIREBASE_PROJECT_ID"),
+    "private_key": private_key,
+    "client_email": os.getenv("FIREBASE_CLIENT_EMAIL"),
+    "token_uri": "https://oauth2.googleapis.com/token"
+}
 try:
-    cred = credentials.Certificate(cred_path)
-    firebase_admin.initialize_app(cred)
+    if not firebase_admin._apps:
+        cred = credentials.Certificate(cred_dict)
+        firebase_admin.initialize_app(
+            cred, {'storageBucket': 'web-final-project-fb1af.appspot.com'})
     db = firestore.client()
     print("✅ Firebase Firestore 連線成功！")
 except Exception as e:
     print(f"❌ Firebase 初始化失敗，請檢查金鑰檔案: {e}")
-
-CORS(app)
 
 # ==========================================
 # 帳號系統與基本網頁路由
@@ -341,16 +347,45 @@ def upload_async():
 
     if file:
         img_bytes = file.read()
-        filename = f"{int(time.time())}_{file.filename}"
-        upload_dir = os.path.abspath(os.path.join(
-            app.root_path, "../frontend/static/upload"))
-        os.makedirs(upload_dir, exist_ok=True)
-        save_path = os.path.join(upload_dir, filename)
 
-        file.seek(0)
-        file.save(save_path)
+        # ==========================================
+        # 1. 呼叫 Imgur API 上傳圖片
+        # ==========================================
+        try:
+            IMGUR_CLIENT_ID = os.getenv('IMGUR_CLIENT_ID')
+            if not IMGUR_CLIENT_ID:
+                print("❌ 找不到 Imgur Client ID，請檢查 .env 檔案")
+                return jsonify({"status": "error", "message": "伺服器設定錯誤"}), 500
 
-        img_url = f"/static/upload/{filename}"
+            headers = {
+                'Authorization': f'Client-ID {IMGUR_CLIENT_ID}'
+            }
+
+            # 將圖片發送給 Imgur
+            print("上傳圖片至 Imgur 中...")
+            response = requests.post(
+                'https://api.imgur.com/3/image',
+                headers=headers,
+                files={'image': img_bytes}
+            )
+
+            response_data = response.json()
+
+            if response.status_code == 200:
+                # 成功！取得 Imgur 給的永久公開網址
+                img_url = response_data['data']['link']
+                print(f"✅ 成功上傳到 Imgur: {img_url}")
+            else:
+                print(f"❌ Imgur 上傳失敗: {response_data}")
+                return jsonify({"status": "error", "message": "圖床伺服器拒絕請求"}), 500
+
+        except Exception as e:
+            print(f"❌ 呼叫 Imgur API 發生錯誤: {str(e)}")
+            return jsonify({"status": "error", "message": f"上傳失敗: {str(e)}"}), 500
+
+        # ==========================================
+        # 2. 將 Imgur 網址寫入 Firestore
+        # ==========================================
         _, doc_ref = db.collection('fish_records').add({
             'username': session['username'],
             'image_url': img_url,
@@ -360,48 +395,46 @@ def upload_async():
             'created_at': firestore.SERVER_TIMESTAMP
         })
 
-        # 💡 2. 拿 Firestore 自動產生的文件 ID 當作 task_id
         task_id = doc_ref.id
 
+        # ==========================================
+        # 3. 啟動背景 AI 辨識任務
+        # ==========================================
         def ai_worker(tid, raw_bytes):
-            import traceback  # 引入最詳盡的報錯工具
+            import traceback
             print(f"🟢 [任務 {tid}] 背景執行緒啟動！")
 
             try:
                 record_ref = db.collection('fish_records').document(tid)
-                print(f"🟢 [任務 {tid}] 成功建立資料庫指標，準備呼叫 AI")
 
                 predictions = analyze_catch_image(raw_bytes)
                 print(f"🟢 [任務 {tid}] AI 分析完成，結果: {predictions}")
 
                 if predictions and predictions[0].get("is_fish") == False:
-                    print(f"🟢 [任務 {tid}] 判斷為非魚類，準備寫入 not_fish")
                     record_ref.update({'status': 'not_fish'})
-                    print(f"🟢 [任務 {tid}] 寫入 not_fish 成功！")
                     return
 
                 if predictions and predictions[0].get("is_TW_fish") == False:
-                    print(f"🟢 [任務 {tid}] 判斷為非台灣魚類，準備寫入 not_TW_fish")
                     record_ref.update({'status': 'not_TW_fish'})
-                    print(f"🟢 [任務 {tid}] 寫入 not_TW_fish 成功！")
                     return
 
                 if predictions:
                     best_match = predictions[0]
                     score = float(best_match.get('score', 0.0))
-
                     fish_type = f"{best_match.get('name', '未知魚種')} (信心度: {score*100:.1f}%)"
                     description = best_match.get('description', '無詳細介紹')
-                    print(f"🟢 [任務 {tid}] 準備寫入成功狀態: {fish_type}")
+
                     record_ref.update({
                         'status': 'completed',
                         'fish_type': fish_type,
                         'description': description
                     })
                 else:
-                    fish_type = "圖片中未偵測到明顯魚類"
-                    description = "無法提供介紹"
-                    print(f"🟢 [任務 {tid}] 無法辨識，準備寫入完成狀態")
+                    record_ref.update({
+                        'status': 'completed',
+                        'fish_type': "圖片中未偵測到明顯魚類",
+                        'description': "無法提供介紹"
+                    })
             except Exception as e:
                 traceback.print_exc()
                 try:
@@ -411,12 +444,14 @@ def upload_async():
                     })
                 except Exception as inner_e:
                     print(f"❌ [任務 {tid}] 連寫入失敗狀態都失敗了: {inner_e}")
+
         thread = threading.Thread(target=ai_worker, args=(task_id, img_bytes))
         thread.start()
+
         return jsonify({
             "status": "success",
             "task_id": task_id,
-            "message": "檔案已上傳，開始辨識"
+            "message": "檔案已上傳至 Imgur 並開始辨識"
         })
 
 
