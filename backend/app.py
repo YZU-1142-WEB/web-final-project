@@ -2,6 +2,7 @@ import os
 import threading
 import uuid
 import markdown
+import base64
 from datetime import datetime, timedelta
 from flask import Flask, render_template, redirect, url_for, request, session, flash, jsonify
 from flask_cors import CORS
@@ -349,43 +350,50 @@ def upload_async():
         img_bytes = file.read()
 
         # ==========================================
-        # 1. 呼叫 Imgur API 上傳圖片
+        # 1. 呼叫 ImgBB API 上傳圖片
         # ==========================================
-        try:
-            IMGUR_CLIENT_ID = os.getenv('IMGUR_CLIENT_ID')
-            if not IMGUR_CLIENT_ID:
-                print("❌ 找不到 Imgur Client ID，請檢查 .env 檔案")
-                return jsonify({"status": "error", "message": "伺服器設定錯誤"}), 500
+        if file:
+            img_bytes = file.read()
 
-            headers = {
-                'Authorization': f'Client-ID {IMGUR_CLIENT_ID}'
-            }
+        # ==========================================
+        # 1. 呼叫 ImgBB API 上傳圖片
+        # ==========================================
+            try:
+                IMGBB_API_KEY = os.getenv('IMGBB_API_KEY')
+                if not IMGBB_API_KEY:
+                    print("❌ 找不到 ImgBB API 金鑰，請檢查 .env 檔案")
+                    return jsonify({"status": "error", "message": "伺服器設定錯誤"}), 500
 
-            # 將圖片發送給 Imgur
-            print("上傳圖片至 Imgur 中...")
-            response = requests.post(
-                'https://api.imgur.com/3/image',
-                headers=headers,
-                files={'image': img_bytes}
-            )
+                print("上傳圖片至 ImgBB 中...")
 
-            response_data = response.json()
+                # 將圖片轉成 base64 格式（最穩定的傳輸方式）
+                b64_img = base64.b64encode(img_bytes).decode('utf-8')
 
-            if response.status_code == 200:
-                # 成功！取得 Imgur 給的永久公開網址
-                img_url = response_data['data']['link']
-                print(f"✅ 成功上傳到 Imgur: {img_url}")
-            else:
-                print(f"❌ Imgur 上傳失敗: {response_data}")
-                return jsonify({"status": "error", "message": "圖床伺服器拒絕請求"}), 500
+                response = requests.post(
+                    "https://api.imgbb.com/1/upload",
+                    data={
+                        "key": IMGBB_API_KEY,
+                        "image": b64_img
+                    }
+                )
 
-        except Exception as e:
-            print(f"❌ 呼叫 Imgur API 發生錯誤: {str(e)}")
-            return jsonify({"status": "error", "message": f"上傳失敗: {str(e)}"}), 500
+                response_data = response.json()
+
+                if response.status_code == 200:
+                    img_url = response_data['data']['url']
+                    print(f"✅ 成功上傳到 ImgBB: {img_url}")
+                else:
+                    print(f"❌ ImgBB 上傳失敗: {response_data}")
+                    return jsonify({"status": "error", "message": "圖床伺服器拒絕請求"}), 500
+
+            except Exception as e:
+                print(f"❌ 呼叫 ImgBB API 發生錯誤: {str(e)}")
+                return jsonify({"status": "error", "message": f"上傳圖床失敗: {str(e)}"}), 500
 
         # ==========================================
         # 2. 將 Imgur 網址寫入 Firestore
         # ==========================================
+
         _, doc_ref = db.collection('fish_records').add({
             'username': session['username'],
             'image_url': img_url,
