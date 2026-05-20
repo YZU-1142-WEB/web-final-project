@@ -1,202 +1,182 @@
 :root {
-	--primary-blue: #3498db;
-	--dark-blue: #2980b9;
-	--bg-gray: #000000;
-	--border-color: #d1d8e0;
-	--text-color: #2f3640;
+    --primary-blue: #3498db;
+    --dark-blue: #2980b9;
+    --bg-gray: #000000;
+    --border-color: #d1d8e0;
+    --text-color: #2f3640;
 }
 
 body {
-	font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 25px;
-	padding: 40px;
-	background-color: var(--bg-gray); /* 改為淺灰色底，讓白色框更立體 */
-	color: var(--text-color);
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 25px;
+    padding: 40px;
+    background-color: var(--bg-gray); /* 改為淺灰色底，讓白色框更立體 */
+    color: var(--text-color);
 }
 
 .container {
-	background-color: white;
-	border: 1px solid var(--border-color);
-	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); /* 添加輕微陰影 */
-	border-radius: 8px; /* 增加圓角感 */
-	box-sizing: border-box;
+    background-color: white;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05); /* 添加輕微陰影 */
+    border-radius: 8px; /* 增加圓角感 */
+    box-sizing: border-box;
 }
 
 /* 頂部大框 */
 #top-box {
-	width: 800px;
-	height: 500px;
-	display: flex;
-	flex-direction: column;
-	overflow: hidden; /* 防止內容超出圓角 */
+    width: 800px;
+    height: 500px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* 防止內容超出圓角 */
 }
 
 .top-content {
-	flex: 5;
-	background-color: #858282;
-	margin: 2px auto;
+    flex: 5;
+    background-color: #fff;
 }
 
 /* 頂部橫線與按鈕區域 */
 .top-actions {
-	flex: 1;
-	border-top: 1px solid var(--border-color);
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	background-color: #fafbfc;
+    flex: 1;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #fafbfc;
 }
 
 /* 針對跳轉連結的修飾 */
 .top-actions a {
-	text-decoration: none; /* 移除任何可能的底線 */
-	display: flex; /* 讓連結容器也支援 flex */
-	justify-content: center;
-	align-items: center;
-	border-radius: 50%; /* 保持圓形外框，讓 hover 效果更乾淨 */
+    text-decoration: none;  /* 移除任何可能的底線 */
+    display: flex;          /* 讓連結容器也支援 flex */
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;     /* 保持圓形外框，讓 hover 效果更乾淨 */
 }
 
 /* --- 精美 CSS 相機按鈕 --- */
 .camera-btn {
-	width: 60px;
-	height: 60px;
-	background-color: var(--primary-blue);
-	border: none;
-	border-radius: 50%;
-	cursor: pointer;
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	transition: all 0.3s ease;
-	box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+    width: 60px;
+    height: 60px;
+    background-color: var(--primary-blue);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
 }
 
 .camera-btn:hover {
-	background-color: var(--dark-blue);
-	transform: scale(1.1); /* 滑鼠經過放大 */
+    background-color: var(--dark-blue);
+    transform: scale(1.1); /* 滑鼠經過放大 */
 }
 
 .camera-body {
-	width: 26px;
-	height: 18px;
-	background-color: white;
-	border-radius: 3px;
-	position: relative;
+    width: 26px;
+    height: 18px;
+    background-color: white;
+    border-radius: 3px;
+    position: relative;
 }
 
 /* 相機上面的快門鈕凸起 */
 .camera-body::before {
-	content: "";
-	position: absolute;
-	width: 8px;
-	height: 4px;
-	background-color: white;
-	top: -4px;
-	left: 4px;
-	border-radius: 2px 2px 0 0;
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 4px;
+    background-color: white;
+    top: -4px;
+    left: 4px;
+    border-radius: 2px 2px 0 0;
 }
 
 .camera-lens {
-	width: 10px;
-	height: 10px;
-	border: 2px solid var(--primary-blue);
-	border-radius: 50%;
-	background-color: white;
-	margin: 2px auto;
+    width: 10px;
+    height: 10px;
+    border: 2px solid var(--primary-blue);
+    border-radius: 50%;
+    background-color: white;
+    margin: 2px auto;
 }
 
 /* --- 其他元素美化 --- */
 
 #middle-input {
-	width: 600px;
-	height: 50px;
-	font-size: 16px;
-	padding: 0 20px;
-	border: 2px solid var(--border-color);
-	border-radius: 25px; /* 膠囊狀輸入框 */
-	outline: none;
-	transition: border-color 0.3s;
+    width: 600px;
+    height: 50px;
+    font-size: 16px;
+    padding: 0 20px;
+    border: 2px solid var(--border-color);
+    border-radius: 25px; /* 膠囊狀輸入框 */
+    outline: none;
+    transition: border-color 0.3s;
 }
 
 #middle-input:focus {
-	border-color: var(--primary-blue); /* 點擊時變藍色 */
+    border-color: var(--primary-blue); /* 點擊時變藍色 */
 }
 
-#fish-container {
-	width: 620px;
-	height: 60px;
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	gap: 12px;
-	margin: 20px 0;
+
+
+#bottom-container {
+    width: 620px;
+    height: 60px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
 }
 
-#random-button {
-	padding: 10px 25px;
-	margin: 30px;
-	background-color: var(--primary-blue);
-	color: white;
-	border: none;
-	border-radius: 5px;
-	font-weight: bold;
-	cursor: pointer;
-	transition: background-color 0.3s;
+#bottom-button {
+    padding: 10px 25px;
+    background-color: var(--primary-blue);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s;
 }
 
-#random-button:hover {
-	background-color: var(--dark-blue);
-}
-
-#display-area {
-	width: 180px;
-	height: 40px;
-	background-color: #ffffff;
-
-	/* 文字排版：靠左對齊 */
-	text-align: left;
-	padding-left: 15px; /* 文字靠左的間距 */
-	line-height: 40px; /* 垂直置中 (與 height 相同) */
-
-	/* 字體樣式 */
-	font-weight: bold;
-	font-size: 16px;
-
-	/* 防止文字溢出 */
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
+#bottom-button:hover {
+    background-color: var(--dark-blue);
 }
 
 /* 潮汐圖卡片 */
 
 #tidal-chart-container {
-	width: 90%;
-	max-width: 1200px;
 
-	height: 500px;
+    width: 90%;
+    max-width: 1200px;
 
-	margin: 30px auto;
+    height: 500px;
 
-	padding: 20px;
+    margin: 30px auto;
 
-	border-radius: 20px;
+    padding: 20px;
 
-	background: rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
 
-	backdrop-filter: blur(10px);
+    background: rgba(255,255,255,0.08);
 
-	box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
 
-	overflow: hidden;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+
+    overflow: hidden;
 }
 
 /* Plotly 畫圖區 */
 
 #tidal-chart {
-	width: 100%;
-	height: 100%;
+
+    width: 100%;
+    height: 100%;
 }
