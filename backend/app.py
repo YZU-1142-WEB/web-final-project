@@ -393,13 +393,17 @@ def upload_async():
                     fish_type = f"{best_match.get('name', '未知魚種')} (信心度: {score*100:.1f}%)"
                     description = best_match.get('description', '無詳細介紹')
                     print(f"🟢 [任務 {tid}] 準備寫入成功狀態: {fish_type}")
+                    record_ref.update({
+                        'status': 'completed',
+                        'fish_type': fish_type,
+                        'description': description
+                    })
                 else:
                     fish_type = "圖片中未偵測到明顯魚類"
                     description = "無法提供介紹"
                     print(f"🟢 [任務 {tid}] 無法辨識，準備寫入完成狀態")
             except Exception as e:
                 traceback.print_exc()
-
                 try:
                     record_ref.update({
                         'status': 'failed',
