@@ -352,48 +352,41 @@ def upload_async():
         # ==========================================
         # 1. 呼叫 ImgBB API 上傳圖片
         # ==========================================
-        if file:
-            img_bytes = file.read()
+        try:
+            IMGBB_API_KEY = os.getenv('IMGBB_API_KEY')
+            if not IMGBB_API_KEY:
+                print("❌ 找不到 ImgBB API 金鑰，請檢查 .env 檔案")
+                return jsonify({"status": "error", "message": "伺服器設定錯誤"}), 500
+
+            print("上傳圖片至 ImgBB 中...")
+
+            # 將圖片轉成 base64 格式（最穩定的傳輸方式）
+            b64_img = base64.b64encode(img_bytes).decode('utf-8')
+
+            response = requests.post(
+                "https://api.imgbb.com/1/upload",
+                data={
+                    "key": IMGBB_API_KEY,
+                    "image": b64_img
+                }
+            )
+
+            response_data = response.json()
+
+            if response.status_code == 200:
+                img_url = response_data['data']['url']
+                print(f"✅ 成功上傳到 ImgBB: {img_url}")
+            else:
+                print(f"❌ ImgBB 上傳失敗: {response_data}")
+                return jsonify({"status": "error", "message": "圖床伺服器拒絕請求"}), 500
+
+        except Exception as e:
+            print(f"❌ 呼叫 ImgBB API 發生錯誤: {str(e)}")
+            return jsonify({"status": "error", "message": f"上傳圖床失敗: {str(e)}"}), 500
 
         # ==========================================
-        # 1. 呼叫 ImgBB API 上傳圖片
+        # 2. 將 ImgBB 網址寫入 Firestore
         # ==========================================
-            try:
-                IMGBB_API_KEY = os.getenv('IMGBB_API_KEY')
-                if not IMGBB_API_KEY:
-                    print("❌ 找不到 ImgBB API 金鑰，請檢查 .env 檔案")
-                    return jsonify({"status": "error", "message": "伺服器設定錯誤"}), 500
-
-                print("上傳圖片至 ImgBB 中...")
-
-                # 將圖片轉成 base64 格式（最穩定的傳輸方式）
-                b64_img = base64.b64encode(img_bytes).decode('utf-8')
-
-                response = requests.post(
-                    "https://api.imgbb.com/1/upload",
-                    data={
-                        "key": IMGBB_API_KEY,
-                        "image": b64_img
-                    }
-                )
-
-                response_data = response.json()
-
-                if response.status_code == 200:
-                    img_url = response_data['data']['url']
-                    print(f"✅ 成功上傳到 ImgBB: {img_url}")
-                else:
-                    print(f"❌ ImgBB 上傳失敗: {response_data}")
-                    return jsonify({"status": "error", "message": "圖床伺服器拒絕請求"}), 500
-
-            except Exception as e:
-                print(f"❌ 呼叫 ImgBB API 發生錯誤: {str(e)}")
-                return jsonify({"status": "error", "message": f"上傳圖床失敗: {str(e)}"}), 500
-
-        # ==========================================
-        # 2. 將 Imgur 網址寫入 Firestore
-        # ==========================================
-
         _, doc_ref = db.collection('fish_records').add({
             'username': session['username'],
             'image_url': img_url,
@@ -459,7 +452,7 @@ def upload_async():
         return jsonify({
             "status": "success",
             "task_id": task_id,
-            "message": "檔案已上傳至 Imgur 並開始辨識"
+            "message": "檔案已上傳至 ImgBB 並開始辨識"
         })
 
 
