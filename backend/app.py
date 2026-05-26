@@ -75,6 +75,13 @@ def camera_page():
     flash("請先登入")
     return redirect(url_for('login'))
 
+@app.route('/my_spots')
+def my_spots_page():
+    if 'username' in session:
+        return render_template('my_spots.html', username=session['username'])
+    flash("請先登入")
+    return redirect(url_for('login'))
+
 
 @app.route('/api/account/login', methods=['GET', 'POST'])
 def login():
@@ -349,6 +356,8 @@ def upload_async():
     if file:
         img_bytes = file.read()
 
+        spot_name = request.form.get('spot_name', '未知釣點')
+
         # ==========================================
         # 1. 呼叫 ImgBB API 上傳圖片
         # ==========================================
@@ -390,6 +399,7 @@ def upload_async():
         _, doc_ref = db.collection('fish_records').add({
             'username': session['username'],
             'image_url': img_url,
+            'spot_name': spot_name,
             'status': 'processing',
             'fish_type': None,
             'description': None,
@@ -480,6 +490,102 @@ def result_page(task_id):
                            img_file=record.get('image_url'),
                            fish_name=record.get('fish_type'),
                            description=record.get('description'))
+
+@app.route('/api/spots/<spot_name>/images', methods=['GET'])
+def get_spot_images(spot_name):
+    """取得特定釣點的所有已完成辨識的漁獲照片"""
+    if 'username' not in session:
+        return jsonify({"status": "error", "message": "請先登入"}), 401
+        
+    try:
+        # 去 Firestore 尋找符合該釣點，且狀態是 completed 的紀錄
+        records_ref = db.collection('fish_records')
+        query = records_ref.where('spot_name', '==', spot_name).where('status', '==', 'completed').stream()
+        
+        images = []
+        for doc in query:
+            data = doc.to_dict()
+            images.append({
+                "id": doc.id,  # 新增這行：把 Firestore 的文件 ID 傳給前端
+                "image_url": data.get("image_url"),
+                "fish_type": data.get("fish_type"),
+                "username": data.get("username")
+            })
+            
+        return jsonify({
+            "status": "success", 
+            "spot_name": spot_name, 
+            "images": images
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    
+@app.route('/api/my_spots', methods=['GET'])
+def get_my_spots():
+    """取得當前使用者所有創建過的釣點名稱列表"""
+    if 'username' not in session:
+        return jsonify({"status": "error", "message": "請先登入"}), 401
+        
+    try:
+        # 去 Firestore 尋找這個使用者的所有紀錄
+        records_ref = db.collection('fish_records')
+        query = records_ref.where('username', '==', session['username']).stream()
+        
+        spots_set = set() # 用 set 來自動過濾重複的釣點名稱
+        for doc in query:
+            data = doc.to_dict()
+            spot = data.get('spot_name')
+            # 確保有釣點名稱且不是預設的未知釣點
+            if spot and spot != '未知釣點':
+                spots_set.add(spot)
+                
+        return jsonify({
+            "status": "success", 
+            "spots": list(spots_set)
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    
+@app.route('/api/picture/<doc_id>', methods=['DELETE'])
+def delete_picture(doc_id):
+    """刪除單張照片紀錄"""
+    if 'username' not in session:
+        return jsonify({"status": "error", "message": "請先登入"}), 401
+        
+    try:
+        doc_ref = db.collection('fish_records').document(doc_id)
+        doc = doc_ref.get()
+        
+        # 為了安全，檢查這張照片是不是這個人的
+        if doc.exists and doc.to_dict().get('username') == session['username']:
+            doc_ref.delete()
+            return jsonify({"status": "success", "message": "照片已刪除"})
+        else:
+            return jsonify({"status": "error", "message": "找不到檔案或權限不足"}), 403
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/spots/<spot_name>', methods=['DELETE'])
+def delete_spot(spot_name):
+    """刪除整個釣點（也就是刪除該釣點下的所有照片紀錄）"""
+    if 'username' not in session:
+        return jsonify({"status": "error", "message": "請先登入"}), 401
+        
+    try:
+        # 找出該使用者在這個釣點的所有紀錄
+        records_ref = db.collection('fish_records')
+        query = records_ref.where('username', '==', session['username']).where('spot_name', '==', spot_name).stream()
+        
+        # 跑迴圈把它們全部刪掉
+        deleted_count = 0
+        for doc in query:
+            doc.reference.delete()
+            deleted_count += 1
+            
+        return jsonify({"status": "success", "message": f"已刪除釣點及 {deleted_count} 張照片"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 if __name__ == '__main__':
