@@ -298,9 +298,9 @@ def ask_llm_async():
     llm_tasks[task_id] = {"status": "processing"}
     chat_history = session.get('chat_history', [])
 
-    def llm_worker(tid, msg):
+    def llm_worker(tid, msg, history):
         try:
-            result = llm_service.chat(msg, history=chat_history)
+            result = llm_service.chat(msg, history=history)
             if result.get("success"):
                 html_reply = markdown.markdown(
                     result["reply"], extensions=['nl2br'])
