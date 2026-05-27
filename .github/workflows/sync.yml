@@ -2,7 +2,7 @@ name: Sync to Hugging Face Hub
 
 on:
     push:
-        branches: [main]
+        branches: [main, master]
     workflow_dispatch:
 
 jobs:
@@ -11,10 +11,19 @@ jobs:
         steps:
             - uses: actions/checkout@v3
               with:
-                  fetch-depth: 0
                   lfs: true
 
-            - name: Push to hub
+            - name: Set up Python
+              uses: actions/setup-python@v4
+              with:
+                  python-version: "3.10"
+
+            - name: Install Hugging Face CLI
+              # 安裝 Hugging Face 官方的上傳工具
+              run: pip install -U "huggingface_hub[cli]"
+
+            - name: Sync to Hugging Face Space
               env:
                   HF_TOKEN: ${{ secrets.HF_TOKEN }}
-              run: git push --force https://stupid-gemini:$HF_TOKEN@huggingface.co/spaces/stupid-gemini/web-final-project HEAD:refs/heads/main
+              # 使用官方工具上傳，自動排除 .git 等不需要的資料夾，並且會自動處理大檔案！
+              run: huggingface-cli upload stupid-gemini/web-final-project ./ ./ --repo-type space --exclude ".git/*" ".github/*"
