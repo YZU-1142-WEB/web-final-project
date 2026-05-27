@@ -24,5 +24,4 @@ jobs:
             - name: Sync to Hugging Face Space
               env:
                   HF_TOKEN: ${{ secrets.HF_TOKEN }}
-              # 把原本的 huggingface-cli 換成了官方最新的 hf 指令
-              run: hf upload stupid-gemini/web-final-project ./ ./ --repo-type space --exclude ".git/*" ".github/*"
+              run: hf upload stupid-gemini/web-final-project ./ ./ --repo-type space --exclude ".git/*" --exclude ".github/*"
