@@ -26,6 +26,10 @@ load_dotenv()
 app = Flask(__name__, template_folder="../frontend/templates",
             static_folder="../frontend/static")
 app.secret_key = os.getenv("SECRET_KEY", "default_secret_key_for_dev")
+app.config.update(
+    SESSION_COOKIE_SAMESITE='None',
+    SESSION_COOKIE_SECURE=True
+)
 
 CORS(app)
 
@@ -298,11 +302,11 @@ def ask_llm_async():
     llm_tasks[task_id] = {"status": "processing"}
     chat_history = session.get('chat_history', [])
 
-    current_history = session.get('chat_history',[])
+    current_history = session.get('chat_history', [])
 
-    def llm_worker(tid, msg , history_data):
+    def llm_worker(tid, msg, history_data):
         try:
-            result = llm_service.chat(msg,history=history_data)
+            result = llm_service.chat(msg, history=history_data)
 
             if result.get("success"):
                 html_reply = markdown.markdown(
@@ -319,32 +323,37 @@ def ask_llm_async():
         except Exception as e:
             llm_tasks[tid] = {"status": "failed", "error_message": str(e)}
 
-    thread = threading.Thread(target=llm_worker, args=(task_id, user_message, current_history))
+    thread = threading.Thread(target=llm_worker, args=(
+        task_id, user_message, current_history))
     thread.start()
     return jsonify({"status": "success", "task_id": task_id, "message": "AI 正在思考中..."})
 
-#未改
+# 未改
+
+
 @app.route('/api/llm/check_task/<task_id>')
 def check_llm_task(task_id):
-    task_data = llm_tasks.get(task_id,{"status": "not_found"})
+    task_data = llm_tasks.get(task_id, {"status": "not_found"})
 
     if task_data.get("status") == "completed" and not task_data.get("saved_to_session"):
         history = session.get('chat_history', [])
 
         # 把最新的這組問答加入歷史陣列
         history.append({"role": "user", "content": task_data['question']})
-        history.append({"role": "assistant", "content": task_data['raw_reply']}) # 存入純文字
-        
+        history.append(
+            {"role": "assistant", "content": task_data['raw_reply']})  # 存入純文字
+
         session['chat_history'] = history
         session.modified = True
-        
+
         # 做個記號，防止前端重複輪詢時，被重複存進陣列裡
         task_data["saved_to_session"] = True
 
-
     return jsonify(task_data)
 
-#未改
+# 未改
+
+
 @app.route('/api/llm/result/<task_id>')
 def llm_result_page(task_id):
     result = llm_tasks.get(task_id)
@@ -357,7 +366,8 @@ def llm_result_page(task_id):
 
     session['chat_history'] = [
         {"role": "user", "content": result['question']},
-        {"role": "assistant", "content": result.get('raw_reply', result['reply'])}
+        {"role": "assistant", "content": result.get(
+            'raw_reply', result['reply'])}
     ]
     session.modified = True
 
