@@ -622,6 +622,6 @@ def delete_spot(spot_name):
 
 if __name__ == '__main__':
     print("✅ 啟動 Flask 伺服器...")
-    port = int(os.environ.get("PORT", 7680))
+    port = int(os.environ.get("PORT", 7860))
     is_local = os.environ.get("SPACE_ID") is None
     app.run(host='0.0.0.0', port=port, debug=is_local)
