@@ -1,0 +1,8 @@
+/* frontend/static/styles/register.css */
+
+/* 獨立出來的錯誤訊息樣式 */
+.error-message {
+    color: red;
+    margin-bottom: 10px;
+    font-weight: bold;
+}
