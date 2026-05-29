@@ -15,6 +15,7 @@
 		></script>
 	</head>
 	<body>
+		<div id="time-display"></div>
 		<div id="top-box" class="container">
 			<div class="top-content"></div>
 
@@ -182,6 +183,7 @@
 			<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 			<script src="{{ url_for('static', filename='random.js') }}"></script>
 			<script src="{{ url_for('static', filename='script.js') }}"></script>
+			<script src="{{ url_for('static', filename='date.js') }}"></script>
 
 			<script>
 				function checkAiTaskStatus() {

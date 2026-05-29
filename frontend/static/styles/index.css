@@ -17,6 +17,12 @@ body {
 	color: var(--text-color);
 }
 
+#time-display {
+    position: relative; 
+    font-size: 30px;
+    color: #9eb1dc; 
+}
+
 .container {
 	background-color: white;
 	border: 1px solid var(--border-color);
