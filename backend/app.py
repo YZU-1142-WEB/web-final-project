@@ -26,6 +26,7 @@ load_dotenv()
 app = Flask(__name__, template_folder="../frontend/templates",
             static_folder="../frontend/static")
 app.secret_key = os.getenv("SECRET_KEY", "default_secret_key_for_dev")
+
 app.config.update(
     SESSION_COOKIE_SAMESITE='None',
     SESSION_COOKIE_SECURE=True
@@ -328,8 +329,6 @@ def ask_llm_async():
     thread.start()
     return jsonify({"status": "success", "task_id": task_id, "message": "AI 正在思考中..."})
 
-# 未改
-
 
 @app.route('/api/llm/check_task/<task_id>')
 def check_llm_task(task_id):
@@ -350,8 +349,6 @@ def check_llm_task(task_id):
         task_data["saved_to_session"] = True
 
     return jsonify(task_data)
-
-# 未改
 
 
 @app.route('/api/llm/result/<task_id>')
@@ -458,11 +455,13 @@ def upload_async():
                 print(f"🟢 [任務 {tid}] AI 分析完成，結果: {predictions}")
 
                 if predictions and predictions[0].get("is_fish") == False:
-                    record_ref.update({'status': 'not_fish'})
+                    print(f"❌ [任務 {tid}] AI 判斷這張照片不是魚類")
+                    record_ref.delete()  
                     return
 
                 if predictions and predictions[0].get("is_TW_fish") == False:
-                    record_ref.update({'status': 'not_TW_fish'})
+                    print(f"❌ [任務 {tid}] AI 判斷這張照片不是台灣魚類")
+                    record_ref.delete()  
                     return
 
                 if predictions:
@@ -477,11 +476,8 @@ def upload_async():
                         'description': description
                     })
                 else:
-                    record_ref.update({
-                        'status': 'completed',
-                        'fish_type': "圖片中未偵測到明顯魚類",
-                        'description': "無法提供介紹"
-                    })
+                    record_ref.delete()
+                    print(f"❌ [任務 {tid}] AI 未回傳有效預測結果，已刪除紀錄")
             except Exception as e:
                 traceback.print_exc()
                 try:
