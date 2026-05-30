@@ -26,10 +26,22 @@ load_dotenv()
 app = Flask(__name__, template_folder="../frontend/templates",
             static_folder="../frontend/static")
 app.secret_key = os.getenv("SECRET_KEY", "default_secret_key_for_dev")
-app.config.update(
-    SESSION_COOKIE_SAMESITE='None',
-    SESSION_COOKIE_SECURE=True
-)
+
+is_local = os.environ.get("SPACE_ID") is None
+if is_local:
+    # HTTP
+    app.config.update(
+        SESSION_COOKIE_SAMESITE='Lax',
+        SESSION_COOKIE_SECURE=False,
+        SESSION_COOKIE_NAME='local_dev_session'
+    )
+else:
+    # HTTPS
+    app.config.update(
+        SESSION_COOKIE_SAMESITE='None',
+        SESSION_COOKIE_SECURE=True,
+        SESSION_COOKIE_NAME='session'
+    )
 
 CORS(app)
 
@@ -633,5 +645,4 @@ def delete_spot(spot_name):
 if __name__ == '__main__':
     print("✅ 啟動 Flask 伺服器...")
     port = int(os.environ.get("PORT", 7860))
-    is_local = os.environ.get("SPACE_ID") is None
     app.run(host='0.0.0.0', port=port, debug=is_local)
