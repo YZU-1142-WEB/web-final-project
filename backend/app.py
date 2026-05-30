@@ -27,10 +27,21 @@ app = Flask(__name__, template_folder="../frontend/templates",
             static_folder="../frontend/static")
 app.secret_key = os.getenv("SECRET_KEY", "default_secret_key_for_dev")
 
-app.config.update(
-    SESSION_COOKIE_SAMESITE='None',
-    SESSION_COOKIE_SECURE=True
-)
+is_local = os.environ.get("SPACE_ID") is None
+if is_local:
+    # HTTP
+    app.config.update(
+        SESSION_COOKIE_SAMESITE='Lax',
+        SESSION_COOKIE_SECURE=False,
+        SESSION_COOKIE_NAME='local_dev_session'
+    )
+else:
+    # HTTPS
+    app.config.update(
+        SESSION_COOKIE_SAMESITE='None',
+        SESSION_COOKIE_SECURE=True,
+        SESSION_COOKIE_NAME='session'
+    )
 
 CORS(app)
 
@@ -454,36 +465,47 @@ def upload_async():
                 predictions = analyze_catch_image(raw_bytes)
                 print(f"🟢 [任務 {tid}] AI 分析完成，結果: {predictions}")
 
+                
                 if predictions and predictions[0].get("is_fish") == False:
                     print(f"❌ [任務 {tid}] AI 判斷這張照片不是魚類")
-                    record_ref.delete()  
+                    record_ref.update({
+                        'status': 'failed',
+                        'error_message': '❌ AI 判斷這張照片不是魚類，請上傳清晰的魚類照片！'
+                    })
                     return
 
                 if predictions and predictions[0].get("is_TW_fish") == False:
                     print(f"❌ [任務 {tid}] AI 判斷這張照片不是台灣魚類")
-                    record_ref.delete()  
+                    record_ref.update({
+                        'status': 'failed',
+                        'error_message': '❌ AI 判斷這張照片不是台灣常見魚類！'
+                    })
                     return
 
                 if predictions:
                     best_match = predictions[0]
                     score = float(best_match.get('score', 0.0))
-                    fish_type = f"{best_match.get('name', '未知魚種')} (信心度: {score*100:.1f}%)"
+                    fish_type = best_match.get('name', '未知魚種')
                     description = best_match.get('description', '無詳細介紹')
 
                     record_ref.update({
                         'status': 'completed',
                         'fish_type': fish_type,
+                        'confidence_score': round( score*100 , 1 ),
                         'description': description
                     })
                 else:
-                    record_ref.delete()
                     print(f"❌ [任務 {tid}] AI 未回傳有效預測結果，已刪除紀錄")
+                    record_ref.update({
+                        'status': 'failed',
+                        'error_message': 'AI 辨識失敗，未回傳有效結果，請重新上傳！'
+                    })
             except Exception as e:
                 traceback.print_exc()
                 try:
                     record_ref.update({
                         'status': 'failed',
-                        'fish_type': f"辨識發生系統錯誤: {str(e)}"
+                        'error_message': f"辨識發生系統錯誤: {str(e)}"
                     })
                 except Exception as inner_e:
                     print(f"❌ [任務 {tid}] 連寫入失敗狀態都失敗了: {inner_e}")
@@ -500,12 +522,26 @@ def upload_async():
 
 @app.route('/api/picture/check_task/<task_id>')
 def check_task(task_id):
-    doc = db.collection('fish_records').document(task_id).get()
+    doc_ref = db.collection('fish_records').document(task_id)
+    doc = doc_ref.get()
+    
     if not doc.exists:
         return jsonify({"status": "not_found"})
+    
     record = doc.to_dict()
+    status = record.get('status')
+
+    if status == 'failed':
+        error_msg = record.get('error_message', '辨識過程發生錯誤')
+        doc_ref.delete()
+
+        return jsonify({
+            "status": "failed",
+            "error_message": error_msg
+        })
+
     return jsonify({
-        "status": record.get('status'),
+        "status": status,
         "fish_name": record.get('fish_type')
     })
 
@@ -513,14 +549,17 @@ def check_task(task_id):
 @app.route('/api/picture/result/<task_id>')
 def result_page(task_id):
     doc = db.collection('fish_records').document(task_id).get()
+
     if not doc.exists:
         return redirect(url_for('home'))
+    
     record = doc.to_dict()
     if record.get('status') != 'completed':
         return redirect(url_for('home'))
     return render_template('result.html',
                            img_file=record.get('image_url'),
                            fish_name=record.get('fish_type'),
+                           confidence=record.get('confidence_score', '無資料'),
                            description=record.get('description'))
 
 
@@ -629,5 +668,4 @@ def delete_spot(spot_name):
 if __name__ == '__main__':
     print("✅ 啟動 Flask 伺服器...")
     port = int(os.environ.get("PORT", 7860))
-    is_local = os.environ.get("SPACE_ID") is None
     app.run(host='0.0.0.0', port=port, debug=is_local)
