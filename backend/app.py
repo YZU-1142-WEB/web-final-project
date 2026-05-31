@@ -66,6 +66,7 @@ except Exception as e:
 # 帳號系統與基本網頁路由
 # ==========================================
 
+
 @app.route('/')
 def home():
     if 'username' in session:
@@ -88,6 +89,7 @@ def camera_page():
         return render_template('camera.html', username=session['username'])
     flash("請先登入")
     return redirect(url_for('login'))
+
 
 @app.route('/my_spots')
 def my_spots_page():
@@ -248,6 +250,7 @@ def get_tidal_data():
 # LLM 判斷是否為合理釣點路由
 # ==========================================
 
+
 @app.route('/api/llm/validate_spot', methods=['POST'])
 def validate_spot():
     if 'username' not in session:
@@ -281,6 +284,7 @@ def validate_spot():
 
 llm_tasks = {}
 
+
 @app.route('/api/llm/ask', methods=['POST'])
 def ask_llm_async():
     if 'username' not in session:
@@ -294,13 +298,8 @@ def ask_llm_async():
 
     task_id = f"llm_{uuid.uuid4().hex[:8]}"
     llm_tasks[task_id] = {"status": "processing"}
-<<<<<<< HEAD
-    chat_history = session.get('chat_history', [])
 
     current_history = session.get('chat_history', [])
-=======
-    current_history = session.get('chat_history',[])
->>>>>>> origin/feature/sort-the-code
 
     def llm_worker(tid, msg, history_data):
         try:
@@ -326,11 +325,6 @@ def ask_llm_async():
     thread.start()
     return jsonify({"status": "success", "task_id": task_id, "message": "AI 正在思考中..."})
 
-<<<<<<< HEAD
-# 未改
-
-=======
->>>>>>> origin/feature/sort-the-code
 
 @app.route('/api/llm/check_task/<task_id>')
 def check_llm_task(task_id):
@@ -339,29 +333,16 @@ def check_llm_task(task_id):
     if task_data.get("status") == "completed" and not task_data.get("saved_to_session"):
         history = session.get('chat_history', [])
         history.append({"role": "user", "content": task_data['question']})
-<<<<<<< HEAD
+
         history.append(
-            {"role": "assistant", "content": task_data['raw_reply']})  # 存入純文字
+            {"role": "assistant", "content": task_data['raw_reply']})
 
         session['chat_history'] = history
         session.modified = True
-
-        # 做個記號，防止前端重複輪詢時，被重複存進陣列裡
-=======
-        history.append({"role": "assistant", "content": task_data['raw_reply']}) 
-        
-        session['chat_history'] = history
-        session.modified = True
->>>>>>> origin/feature/sort-the-code
         task_data["saved_to_session"] = True
 
     return jsonify(task_data)
 
-<<<<<<< HEAD
-# 未改
-
-=======
->>>>>>> origin/feature/sort-the-code
 
 @app.route('/api/llm/result/<task_id>')
 def llm_result_page(task_id):
@@ -369,25 +350,12 @@ def llm_result_page(task_id):
     if not result or result['status'] != 'completed':
         return redirect(url_for('home'))
 
-<<<<<<< HEAD
-    history = session.get('chat_history', [])
-    history.append({"role": "user", "content": result['question']})
-    history.append({"role": "assistant", "content": result['reply']})
-
-    session['chat_history'] = [
-        {"role": "user", "content": result['question']},
-        {"role": "assistant", "content": result.get(
-            'raw_reply', result['reply'])}
-    ]
-    session.modified = True
-
-=======
->>>>>>> origin/feature/sort-the-code
     return render_template('llm_result.html', question=result['question'], reply=result['reply'])
 
 # ==========================================
-# 圖片上傳與 AI 辨識路由 
+# 圖片上傳與 AI 辨識路由
 # ==========================================
+
 
 @app.route('/api/picture/upload', methods=['POST'])
 def upload_async():
@@ -457,36 +425,45 @@ def upload_async():
                 print(f"🟢 [任務 {tid}] AI 分析完成，結果: {predictions}")
 
                 if predictions and predictions[0].get("is_fish") == False:
-                    record_ref.update({'status': 'not_fish'})
+                    print(f"❌ [任務 {tid}] AI 判斷這張照片不是魚類")
+                    record_ref.update({
+                        'status': 'failed',
+                        'error_message': '❌ AI 判斷這張照片不是魚類，請上傳清晰的魚類照片！'
+                    })
                     return
 
                 if predictions and predictions[0].get("is_TW_fish") == False:
-                    record_ref.update({'status': 'not_TW_fish'})
+                    print(f"❌ [任務 {tid}] AI 判斷這張照片不是台灣魚類")
+                    record_ref.update({
+                        'status': 'failed',
+                        'error_message': '❌ AI 判斷這張照片不是台灣常見魚類！'
+                    })
                     return
 
                 if predictions:
                     best_match = predictions[0]
                     score = float(best_match.get('score', 0.0))
-                    fish_type = f"{best_match.get('name', '未知魚種')} (信心度: {score*100:.1f}%)"
+                    fish_type = best_match.get('name', '未知魚種')
                     description = best_match.get('description', '無詳細介紹')
 
                     record_ref.update({
                         'status': 'completed',
                         'fish_type': fish_type,
+                        'confidence_score': round(score*100, 1),
                         'description': description
                     })
                 else:
+                    print(f"❌ [任務 {tid}] AI 未回傳有效預測結果，已刪除紀錄")
                     record_ref.update({
-                        'status': 'completed',
-                        'fish_type': "圖片中未偵測到明顯魚類",
-                        'description': "無法提供介紹"
+                        'status': 'failed',
+                        'error_message': 'AI 辨識失敗，未回傳有效結果，請重新上傳！'
                     })
             except Exception as e:
                 traceback.print_exc()
                 try:
                     record_ref.update({
                         'status': 'failed',
-                        'fish_type': f"辨識發生系統錯誤: {str(e)}"
+                        'error_message': f"辨識發生系統錯誤: {str(e)}"
                     })
                 except Exception as inner_e:
                     print(f"❌ [任務 {tid}] 連寫入失敗狀態都失敗了: {inner_e}")
@@ -503,12 +480,26 @@ def upload_async():
 
 @app.route('/api/picture/check_task/<task_id>')
 def check_task(task_id):
-    doc = db.collection('fish_records').document(task_id).get()
+    doc_ref = db.collection('fish_records').document(task_id)
+    doc = doc_ref.get()
+
     if not doc.exists:
         return jsonify({"status": "not_found"})
+
     record = doc.to_dict()
+    status = record.get('status')
+
+    if status == 'failed':
+        error_msg = record.get('error_message', '辨識過程發生錯誤')
+        doc_ref.delete()
+
+        return jsonify({
+            "status": "failed",
+            "error_message": error_msg
+        })
+
     return jsonify({
-        "status": record.get('status'),
+        "status": status,
         "fish_name": record.get('fish_type')
     })
 
@@ -516,14 +507,17 @@ def check_task(task_id):
 @app.route('/api/picture/result/<task_id>')
 def result_page(task_id):
     doc = db.collection('fish_records').document(task_id).get()
+
     if not doc.exists:
         return redirect(url_for('home'))
+
     record = doc.to_dict()
     if record.get('status') != 'completed':
         return redirect(url_for('home'))
     return render_template('result.html',
                            img_file=record.get('image_url'),
                            fish_name=record.get('fish_type'),
+                           confidence=record.get('confidence_score', '無資料'),
                            description=record.get('description'))
 
 
@@ -532,63 +526,67 @@ def get_spot_images(spot_name):
     """取得特定釣點的所有已完成辨識的漁獲照片"""
     if 'username' not in session:
         return jsonify({"status": "error", "message": "請先登入"}), 401
-        
+
     try:
         records_ref = db.collection('fish_records')
-        query = records_ref.where('spot_name', '==', spot_name).where('status', '==', 'completed').stream()
-        
+        query = records_ref.where('spot_name', '==', spot_name).where(
+            'status', '==', 'completed').stream()
+
         images = []
         for doc in query:
             data = doc.to_dict()
             images.append({
-                "id": doc.id, 
+                "id": doc.id,
                 "image_url": data.get("image_url"),
                 "fish_type": data.get("fish_type"),
                 "username": data.get("username")
             })
-            
+
         return jsonify({
-            "status": "success", 
-            "spot_name": spot_name, 
+            "status": "success",
+            "spot_name": spot_name,
             "images": images
         })
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
-    
+
+
 @app.route('/api/my_spots', methods=['GET'])
 def get_my_spots():
     """取得當前使用者所有創建過的釣點名稱列表"""
     if 'username' not in session:
         return jsonify({"status": "error", "message": "請先登入"}), 401
-        
+
     try:
         records_ref = db.collection('fish_records')
-        query = records_ref.where('username', '==', session['username']).stream()
-        
+        query = records_ref.where(
+            'username', '==', session['username']).stream()
+
         spots_set = set()
         for doc in query:
             data = doc.to_dict()
             spot = data.get('spot_name')
             if spot and spot != '未知釣點':
                 spots_set.add(spot)
-                
+
         return jsonify({
-            "status": "success", 
+            "status": "success",
             "spots": list(spots_set)
         })
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
-    
+
+
 @app.route('/api/picture/<doc_id>', methods=['DELETE'])
 def delete_picture(doc_id):
     """刪除單張照片紀錄"""
     if 'username' not in session:
         return jsonify({"status": "error", "message": "請先登入"}), 401
-        
+
     try:
         doc_ref = db.collection('fish_records').document(doc_id)
         doc = doc_ref.get()
-        
+
         if doc.exists and doc.to_dict().get('username') == session['username']:
             doc_ref.delete()
             return jsonify({"status": "success", "message": "照片已刪除"})
@@ -603,16 +601,17 @@ def delete_spot(spot_name):
     """刪除整個釣點（也就是刪除該釣點下的所有照片紀錄）"""
     if 'username' not in session:
         return jsonify({"status": "error", "message": "請先登入"}), 401
-        
+
     try:
         records_ref = db.collection('fish_records')
-        query = records_ref.where('username', '==', session['username']).where('spot_name', '==', spot_name).stream()
-        
+        query = records_ref.where('username', '==', session['username']).where(
+            'spot_name', '==', spot_name).stream()
+
         deleted_count = 0
         for doc in query:
             doc.reference.delete()
             deleted_count += 1
-            
+
         return jsonify({"status": "success", "message": f"已刪除釣點及 {deleted_count} 張照片"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -621,9 +620,4 @@ def delete_spot(spot_name):
 if __name__ == '__main__':
     print("✅ 啟動 Flask 伺服器...")
     port = int(os.environ.get("PORT", 7860))
-<<<<<<< HEAD
     app.run(host='0.0.0.0', port=port, debug=is_local)
-=======
-    is_local = os.environ.get("SPACE_ID") is None
-    app.run(host='0.0.0.0', port=port, debug=is_local)
->>>>>>> origin/feature/sort-the-code

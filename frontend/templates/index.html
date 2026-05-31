@@ -4,13 +4,7 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>魚類辨識首頁</title>
-        
         <link rel="stylesheet" href="{{ url_for('static', filename='styles/index.css') }}" />
-
-		<script
-			src="https://cdn.plot.ly/plotly-2.24.1.min.js"
-			charset="utf-8"
-		></script>
 	</head>
 	<body>
 		<div id="time-display"></div>
@@ -102,9 +96,13 @@
 
 			<a href="{{ url_for('logout') }}">登出</a>
 			<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-			<script src="{{ url_for('static', filename='random.js') }}"></script>
-			<script src="{{ url_for('static', filename='script.js') }}"></script>
-			<script src="{{ url_for('static', filename='date.js') }}"></script>
+			<script src="{{ url_for('static/javascript', filename='random.js') }}"></script>
+			<script src="{{ url_for('static/javascript', filename='script.js') }}"></script>
+			<script src="{{ url_for('static/javascript', filename='date.js') }}"></script>
+			<script
+			src="https://cdn.plot.ly/plotly-2.24.1.min.js"
+			charset="utf-8"
+		></script>
 
 			<script>
 				function checkAiTaskStatus() {
