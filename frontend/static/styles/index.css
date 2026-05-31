@@ -175,7 +175,33 @@ body {
 	box-shadow: 0 0 0 4px rgba(0, 119, 182, 0.1);
 }
 
-#require-LLM-button,
+
+#require-LLM-button {
+	margin-right:10px;
+    padding: 0;                   
+    background-color: transparent; 
+    border: none;                 
+    height: 50px;                 
+    width: 50px;                 
+    cursor: pointer;
+    display: flex;                
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s ease; /* 保留滑動過去的動畫過渡時間 */
+}
+
+/* 圖片按鈕專屬的 Hover 效果（滑鼠移過去稍微放大就好，不需要變色） */
+#require-LLM-button:hover {
+    transform: scale(1.1); 
+}
+
+
+#llm-button-icon {
+    height: 40px; 
+    width: auto;
+    display: block;
+}
+
 #add-spot-btn,
 #random-button {
 	padding: 0 25px;
@@ -191,7 +217,7 @@ body {
 	white-space: nowrap;
 }
 
-#require-LLM-button:hover,
+
 #add-spot-btn:hover,
 #random-button:hover {
 	background-color: var(--dark-blue);

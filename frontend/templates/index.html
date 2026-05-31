@@ -20,7 +20,9 @@
 					type="text"
 					placeholder="輸入問題詢問 AI..."
 				/>
-				<button id="require-LLM-button">傳送</button>
+				<button id="require-LLM-button">
+					<canvas id="llm-button-icon" width="273" height="269"></canvas>
+				</button>	
 			</div>
 
 			<div id="fish-container" class="container">
@@ -101,6 +103,7 @@
 			<script src="{{ url_for('static', filename='javascript/random.js') }}"></script>
 			<script src="{{ url_for('static', filename='javascript/script.js') }}"></script>
 			<script src="{{ url_for('static', filename='date.js') }}"></script>
+			<script src="{{ url_for('static', filename='llmrequest.js') }}"></script>
 			<script
 				src="https://cdn.plot.ly/plotly-2.24.1.min.js"
 				charset="utf-8"
