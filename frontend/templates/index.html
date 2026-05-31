@@ -1,83 +1,85 @@
 <!doctype html>
 <html lang="zh-Hant">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>魚類辨識首頁</title>
-        <link rel="stylesheet" href="{{ url_for('static', filename='styles/index.css') }}" />
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>魚類辨識首頁</title>
+		<link
+			rel="stylesheet"
+			href="{{ url_for('static', filename='styles/index.css') }}"
+		/>
 	</head>
 	<body>
 		<div id="time-display"></div>
 		<div id="top-box" class="container">
 			<div class="top-content"></div>
 
-        <div class="input-group">
-            <input id="middle-input" type="text" placeholder="輸入問題詢問 AI..." />
-            <button id="require-LLM-button">傳送</button>
-        </div>
+			<div class="input-group">
+				<input
+					id="middle-input"
+					type="text"
+					placeholder="輸入問題詢問 AI..."
+				/>
+				<button id="require-LLM-button">傳送</button>
+			</div>
 
-        <div id="fish-container" class="container">
-            <div id="display-area">準備抽魚...</div>
-            <button id="random-button">開抽</button>
-        </div>
+			<div id="fish-container" class="container">
+				<div id="display-area">準備抽魚...</div>
+				<button id="random-button">開抽</button>
+			</div>
 
-        <div class="input-group input-group-mt">
-            <input id="spot-input" type="text" placeholder="輸入新增的釣點名稱 (例如: 野柳)" />
-            <button id="add-spot-btn">加入釣點</button>
-        </div>
+			<div class="input-group input-group-mt">
+				<input
+					id="spot-input"
+					type="text"
+					placeholder="輸入新增的釣點名稱 (例如: 野柳)"
+				/>
+				<button id="add-spot-btn">加入釣點</button>
+			</div>
 
-        <div class="container" style="text-align: center;">
-            <a href="/my_spots" class="gallery-link">📍 顯示我的釣點圖庫</a>
-        </div>
+			<div class="container" style="text-align: center">
+				<a href="/my_spots" class="gallery-link">📍 顯示我的釣點圖庫</a>
+			</div>
 
-        <div class="county-select-wrapper">
-            <label for="county-selector">選擇縣市：</label>
-            <select id="county-selector">
-                <optgroup label="北部">
-                    <option value="基隆市">基隆市</option>
-                    <option value="新北市" selected>新北市</option> <option value="桃園市">桃園市</option>
-                    <option value="新竹">新竹縣市</option>
-                </optgroup>
-                <optgroup label="中部">
-                    <option value="苗栗縣">苗栗縣</option>
-                    <option value="臺中市">臺中市</option>
-                    <option value="彰化縣">彰化縣</option>
-                    <option value="雲林縣">雲林縣</option>
-                </optgroup>
-                <optgroup label="南部">
-                    <option value="嘉義縣">嘉義縣</option>
-                    <option value="臺南市">臺南市</option>
-                    <option value="高雄市">高雄市</option>
-                    <option value="屏東縣">屏東縣</option>
-                </optgroup>
-                <optgroup label="東部">
-                    <option value="宜蘭縣">宜蘭縣</option>
-                    <option value="花蓮縣">花蓮縣</option>
-                    <option value="臺東縣">臺東縣</option>
-                </optgroup>
-                <optgroup label="外島">
-                    <option value="澎湖縣">澎湖縣</option>
-                    <option value="金門縣">金門縣</option>
-                    <option value="連江縣">連江縣 (馬祖)</option>
-                </optgroup>
-            </select>
-        </div>
+			<div class="county-select-wrapper">
+				<label for="county-selector">選擇縣市：</label>
+				<select id="county-selector">
+					<optgroup label="北部">
+						<option value="基隆市">基隆市</option>
+						<option value="新北市" selected>新北市</option>
+						<option value="桃園市">桃園市</option>
+						<option value="新竹">新竹縣市</option>
+					</optgroup>
+					<optgroup label="中部">
+						<option value="苗栗縣">苗栗縣</option>
+						<option value="臺中市">臺中市</option>
+						<option value="彰化縣">彰化縣</option>
+						<option value="雲林縣">雲林縣</option>
+					</optgroup>
+					<optgroup label="南部">
+						<option value="嘉義縣">嘉義縣</option>
+						<option value="臺南市">臺南市</option>
+						<option value="高雄市">高雄市</option>
+						<option value="屏東縣">屏東縣</option>
+					</optgroup>
+					<optgroup label="東部">
+						<option value="宜蘭縣">宜蘭縣</option>
+						<option value="花蓮縣">花蓮縣</option>
+						<option value="臺東縣">臺東縣</option>
+					</optgroup>
+					<optgroup label="外島">
+						<option value="澎湖縣">澎湖縣</option>
+						<option value="金門縣">金門縣</option>
+						<option value="連江縣">連江縣 (馬祖)</option>
+					</optgroup>
+				</select>
+			</div>
 
-        <div id="all-charts-wrapper" class="container"></div>
+			<div id="all-charts-wrapper" class="container"></div>
 
-        <div class="container" style="text-align: center; margin-top: 15px;">
-            <a href="{{ url_for('logout') }}" class="logout-link">登出</a>
-        </div>
-
-				/* 單張卡片樣式 */
-				.chart-card {
-					background: #ffffff; /* 卡片純白底 */
-					border: 1px solid #eeeeee;
-					border-radius: 15px;
-					box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-					padding: 10px;
-				}
-			</style>
+			<div class="container" style="text-align: center; margin-top: 15px">
+				<a href="{{ url_for('logout') }}" class="logout-link">登出</a>
+			</div>
 
 			<div
 				id="all-charts-wrapper"
@@ -96,13 +98,13 @@
 
 			<a href="{{ url_for('logout') }}">登出</a>
 			<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-			<script src="{{ url_for('static/javascript', filename='random.js') }}"></script>
-			<script src="{{ url_for('static/javascript', filename='script.js') }}"></script>
-			<script src="{{ url_for('static/javascript', filename='date.js') }}"></script>
+			<script src="{{ url_for('static', filename='javascript/random.js') }}"></script>
+			<script src="{{ url_for('static', filename='javascript/script.js') }}"></script>
+			<script src="{{ url_for('static', filename='date.js') }}"></script>
 			<script
-			src="https://cdn.plot.ly/plotly-2.24.1.min.js"
-			charset="utf-8"
-		></script>
+				src="https://cdn.plot.ly/plotly-2.24.1.min.js"
+				charset="utf-8"
+			></script>
 
 			<script>
 				function checkAiTaskStatus() {

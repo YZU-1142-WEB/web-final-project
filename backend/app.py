@@ -3,11 +3,10 @@ import threading
 import uuid
 import markdown
 import base64
-from datetime import datetime, timedelta
 from flask import Flask, render_template, redirect, url_for, request, session, flash, jsonify
 from flask_cors import CORS
 import firebase_admin
-from firebase_admin import credentials, firestore, storage
+from firebase_admin import credentials, firestore
 from dotenv import load_dotenv
 from LLM.LLM import llm_service
 from image_identify.image_identify import analyze_catch_image
@@ -71,14 +70,6 @@ except Exception as e:
 def home():
     if 'username' in session:
         return render_template('index.html', username=session['username'])
-    flash("請先登入")
-    return redirect(url_for('login'))
-
-
-@app.route('/dashboard')
-def dashboard():
-    if 'username' in session:
-        return render_template('dashboard.html', username=session['username'])
     flash("請先登入")
     return redirect(url_for('login'))
 

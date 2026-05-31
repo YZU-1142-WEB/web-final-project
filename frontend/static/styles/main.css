@@ -1,29 +1,59 @@
 :root {
-	--primary-color: #5c67f2;
-	--secondary-color: #43e97b;
-	--text-dark: #333;
+	/* 💙 海洋主題色系 */
+	--primary-color: #0077b6; /* 主按鈕、強調色 */
+	--primary-hover: #023e8a;
+	--secondary-color: #00b4d8; /* 次要元素 */
+	--accent-color: #f77f00; /* 警告、醒目提示 (如釣點驗證失敗) */
+
+	/* ⚪ 背景與文字 */
+	--bg-color: #f8f9fa; /* 整體淺灰背景 */
+	--card-bg: #ffffff;
+	--text-main: #2b2d42;
+	--text-muted: #8d99ae;
+
+	/* 📏 間距與圓角系統 */
+	--spacing-sm: 8px;
+	--spacing-md: 16px;
+	--spacing-lg: 24px;
+	--border-radius: 12px; /* 現代化的大圓角 */
+
+	/* 🌊 陰影效果 */
+	--box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-* {
+/* 讓寬度計算包含 padding 和 border */
+*,
+*::before,
+*::after {
 	box-sizing: border-box;
 	margin: 0;
 	padding: 0;
 }
 
 body {
-	font-family: "Microsoft JhengHei", Arial, sans-serif;
-	background-image: url("../images/background.png");
-	background-size: cover;
-	background-position: center;
-	background-attachment: fixed;
-	display: flex;
-	justify-content: center;
-	align-items: center;
+	font-family:
+		"Noto Sans TC",
+		-apple-system,
+		BlinkMacSystemFont,
+		"Segoe UI",
+		Roboto,
+		sans-serif;
+	background-color: var(--bg-color);
+	color: var(--text-main);
+	line-height: 1.6;
 	min-height: 100vh;
-	background-color: #e0f7fa;
-	padding: 2rem 0;
+	display: flex;
+	flex-direction: column;
 }
 
+/* 讓主內容區塊自動撐開，把 footer 擠到底部 */
+main {
+	flex: 1;
+	padding: var(--spacing-md);
+	max-width: 1200px;
+	margin: 0 auto;
+	width: 100%;
+}
 .container,
 .card {
 	background: rgba(255, 255, 255, 0.5);
