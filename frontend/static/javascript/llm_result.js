@@ -1,0 +1,116 @@
+// frontend/static/javascript/llm_result.js
+
+document.addEventListener("DOMContentLoaded", () => {
+    const inputBtn = document.getElementById("require-LLM-button");
+    const inputField = document.getElementById("middle-input");
+    const chatContainer = document.getElementById("chat-container");
+
+    // 將 restoreInputState 移到外面，這樣更乾淨
+    function restoreInputState() {
+        inputField.disabled = false;
+        inputBtn.disabled = false;
+        inputBtn.innerText = "傳送";
+        inputField.focus();
+        window.scrollTo({
+            top: document.body.scrollHeight,
+            behavior: "smooth",
+        });
+    }
+
+    async function askFollowUpQuestion() {
+        const text = inputField.value.trim();
+        if (!text) return;
+
+        // 1. 禁用輸入框，避免重複送出
+        inputField.value = "";
+        inputField.disabled = true;
+        inputBtn.disabled = true;
+        inputBtn.innerText = "思考中...";
+
+        // 2. 把使用者的「新問題」加到畫面上
+        const newQuestionHtml = `
+            <div class="question-box">
+                🗣️ 你的問題：<br>
+                <span style="color: #333; font-weight: normal; display: inline-block; margin-top: 5px;">${text}</span>
+            </div>
+        `;
+        chatContainer.insertAdjacentHTML("beforeend", newQuestionHtml);
+
+        // 3. 加上「AI 思考中」的佔位動畫
+        const loadingId = "loading-" + Date.now();
+        const loadingHtml = `<div id="${loadingId}" class="thinking-box">🤖 AI 正在拼命打字中...</div>`;
+        chatContainer.insertAdjacentHTML("beforeend", loadingHtml);
+
+        // 自動捲動到最下面
+        window.scrollTo({
+            top: document.body.scrollHeight,
+            behavior: "smooth",
+        });
+
+        try {
+            // 4. 發送請求給後端的 /api/llm/ask
+            const response = await fetch('/api/llm/ask', {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ input_text: text }),
+            });
+
+            const data = await response.json();
+
+            // 判斷後端是否成功建立任務
+            if (response.ok && data.status === "success") {
+                const taskId = data.task_id;
+                
+                // 5. 啟動輪詢機制，每 2 秒檢查一次進度
+                const checkInterval = setInterval(async () => {
+                    try {
+                        const checkRes = await fetch(`/api/llm/check_task/${taskId}`);
+                        const taskData = await checkRes.json();
+
+                        if (taskData.status === "completed") {
+                            clearInterval(checkInterval); // 停止輪詢
+                            document.getElementById(loadingId).remove(); // 移除「思考中」
+
+                            // 把 AI 的「新回答」加到畫面上
+                            const newAnswerHtml = `
+                                <div class="answer-box">
+                                    <strong> AI 的回答：</strong>
+                                    <div style="margin-top: 10px;">${taskData.reply}</div>
+                                </div>
+                            `;
+                            chatContainer.insertAdjacentHTML("beforeend", newAnswerHtml);
+                            
+                            // 任務完成，恢復輸入框
+                            restoreInputState();
+                            
+                        } else if (taskData.status === "failed") {
+                            clearInterval(checkInterval);
+                            document.getElementById(loadingId).remove();
+                            alert("❌ AI 發生錯誤: " + (taskData.error_message || "未知錯誤"));
+                            restoreInputState(); // 任務失敗，恢復輸入框
+                        }
+                        // 如果 status 是 "processing"，就什麼都不做，等待 2 秒後再查一次
+                    } catch (err) {
+                        console.error("檢查任務狀態時發生錯誤:", err);
+                    }
+                }, 2000);
+
+            } else {
+                document.getElementById(loadingId).remove();
+                alert("❌ 發生錯誤: " + (data.message || "無法建立任務"));
+                restoreInputState();
+            }
+        } catch (error) {
+            console.error("連線錯誤:", error);
+            document.getElementById(loadingId)?.remove();
+            alert("❌ 連線伺服器失敗，請檢查網路！");
+            restoreInputState();
+        }
+    }
+
+    // 綁定「點擊傳送按鈕」與「按下 Enter 鍵」事件
+    inputBtn.addEventListener("click", askFollowUpQuestion);
+    inputField.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") askFollowUpQuestion();
+    });
+});

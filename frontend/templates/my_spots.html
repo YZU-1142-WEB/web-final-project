@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>混跡漁生 - 我的專屬釣點圖庫</title>
+    
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/my_spots.css') }}">
+</head>
+<body>
+
+<div class="container">
+    <a href="/" class="back-btn">⬅ 回首頁</a>
+    <h1>📍 我的專屬釣點圖庫</h1>
+    <p>請選擇下方釣點，查看你在該處捕獲的所有精采紀錄：</p>
+
+    <div class="spot-menu" id="spotMenu">
+        <p style="color: #757575; margin: 5px;">正在載入釣點清單... ⏳</p>
+    </div>
+
+    <h2 class="gallery-title" id="currentSpotTitle">請先選取釣點</h2>
+    <div class="image-grid" id="imageGrid">
+        <div class="no-data">尚未選取任何釣點，或該釣點內目前沒有照片。</div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='javascript/my_spots.js') }}"></script>
+</body>
+</html>

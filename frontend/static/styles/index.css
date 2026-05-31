@@ -1,198 +1,318 @@
+/* frontend/static/styles/index.css */
+
+/* ==========================================
+   1. 顏色變數與全域基礎設定
+========================================== */
 :root {
-	--primary-blue: #3498db;
-	--dark-blue: #2980b9;
-	--bg-gray: #000000;
-	--border-color: #d1d8e0;
-	--text-color: #2f3640;
+    --primary-blue: #3498db;
+    --dark-blue: #2980b9;
+    --bg-gray: #000000;
+    --border-color: #d1d8e0;
+    --text-color: #2f3640;
 }
 
 body {
-	font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 25px;
-	padding: 40px;
-	background-color: var(--bg-gray); /* 改為淺灰色底，讓白色框更立體 */
-	color: var(--text-color);
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 25px;
+    padding: 40px;
+    margin: 0;
+    background-color: var(--bg-gray); /* 淺灰色底，讓白色框更立體 */
+    color: var(--text-color);
 }
 
 .container {
-	background-color: white;
-	border: 1px solid var(--border-color);
-	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); /* 添加輕微陰影 */
-	border-radius: 8px; /* 增加圓角感 */
-	box-sizing: border-box;
+    background-color: white;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); /* 添加輕微陰影 */
+    border-radius: 8px; /* 增加圓角感 */
+    box-sizing: border-box;
+    max-width: 1000px;
 }
 
-/* 頂部大框 */
+/* ==========================================
+   2. 首頁頂部相機區塊
+========================================== */
 #top-box {
-	width: 800px;
-	height: 500px;
-	display: flex;
-	flex-direction: column;
-	overflow: hidden; /* 防止內容超出圓角 */
+    width: 800px;
+    height: 500px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* 防止內容超出圓角 */
 }
 
 .top-content {
-	flex: 5;
-	background-color: #858282;
+    flex: 5;
+    background-color: #858282;
 }
 
-/* 頂部橫線與按鈕區域 */
 .top-actions {
-	flex: 1;
-	border-top: 1px solid var(--border-color);
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	background-color: #fafbfc;
+    flex: 1;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #fafbfc;
 }
 
-/* 針對跳轉連結的修飾 */
 .top-actions a {
-	text-decoration: none; /* 移除任何可能的底線 */
-	display: flex; /* 讓連結容器也支援 flex */
-	justify-content: center;
-	align-items: center;
-	border-radius: 50%; /* 保持圓形外框，讓 hover 效果更乾淨 */
+    text-decoration: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
 }
 
-/* --- 精美 CSS 相機按鈕 --- */
+/* 精美 CSS 相機按鈕 */
 .camera-btn {
-	width: 60px;
-	height: 60px;
-	background-color: var(--primary-blue);
-	border: none;
-	border-radius: 50%;
-	cursor: pointer;
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	transition: all 0.3s ease;
-	box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+    width: 60px;
+    height: 60px;
+    background-color: var(--primary-blue);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
 }
 
 .camera-btn:hover {
-	background-color: var(--dark-blue);
-	transform: scale(1.1); /* 滑鼠經過放大 */
+    background-color: var(--dark-blue);
+    transform: scale(1.1);
 }
 
 .camera-body {
-	width: 26px;
-	height: 18px;
-	background-color: white;
-	border-radius: 3px;
-	position: relative;
+    width: 26px;
+    height: 18px;
+    background-color: white;
+    border-radius: 3px;
+    position: relative;
 }
 
-/* 相機上面的快門鈕凸起 */
 .camera-body::before {
-	content: "";
-	position: absolute;
-	width: 8px;
-	height: 4px;
-	background-color: white;
-	top: -4px;
-	left: 4px;
-	border-radius: 2px 2px 0 0;
+    content: "";
+    position: absolute;
+    width: 8px;
+    height: 4px;
+    background-color: white;
+    top: -4px;
+    left: 4px;
+    border-radius: 2px 2px 0 0;
 }
 
 .camera-lens {
-	width: 10px;
-	height: 10px;
-	border: 2px solid var(--primary-blue);
-	border-radius: 50%;
-	background-color: white;
-	margin: 2px auto;
+    width: 10px;
+    height: 10px;
+    border: 2px solid var(--primary-blue);
+    border-radius: 50%;
+    background-color: white;
+    margin: 2px auto;
 }
 
-/* --- 其他元素美化 --- */
-
-#middle-input {
-	width: 600px;
-	height: 50px;
-	font-size: 16px;
-	padding: 0 20px;
-	border: 2px solid var(--border-color);
-	border-radius: 25px; /* 膠囊狀輸入框 */
-	outline: none;
-	transition: border-color 0.3s;
+/* ==========================================
+   3. 提問輸入框與抽魚區塊
+========================================== */
+.input-group {
+    display: flex;
+    gap: 10px;
+    align-items: center;
 }
 
-#middle-input:focus {
-	border-color: var(--primary-blue); /* 點擊時變藍色 */
+.input-group-mt {
+    margin-top: 20px;
+}
+
+#middle-input,
+#spot-input {
+    width: 600px;
+    height: 50px;
+    font-size: 16px;
+    padding: 0 20px;
+    border: 2px solid var(--border-color);
+    border-radius: 25px;
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+#middle-input:focus,
+#spot-input:focus {
+    border-color: var(--primary-blue);
+}
+
+#require-LLM-button,
+#add-spot-btn {
+    padding: 10px 25px;
+    background-color: var(--primary-blue);
+    color: white;
+    border: none;
+    border-radius: 25px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    height: 50px;
+}
+
+#require-LLM-button:hover,
+#add-spot-btn:hover {
+    background-color: var(--dark-blue);
 }
 
 #fish-container {
-	width: 620px;
-	height: 60px;
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
+    width: 620px;
+    height: 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
 }
 
 #random-button {
-	padding: 10px 25px;
-	background-color: var(--primary-blue);
-	color: white;
-	border: none;
-	border-radius: 5px;
-	font-weight: bold;
-	cursor: pointer;
-	transition: background-color 0.3s;
+    padding: 10px 25px;
+    background-color: var(--primary-blue);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s;
 }
 
 #random-button:hover {
-	background-color: var(--dark-blue);
+    background-color: var(--dark-blue);
 }
 
 #display-area {
-	width: 180px;
-	height: 40px;
-	background-color: #ffffff;
-
-	/* 文字排版：靠左對齊 */
-	text-align: left;
-	padding-left: 15px; /* 文字靠左的間距 */
-	line-height: 40px; /* 垂直置中 (與 height 相同) */
-
-	/* 字體樣式 */
-	font-weight: bold;
-	font-size: 16px;
-
-	/* 防止文字溢出 */
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
+    width: 180px;
+    height: 40px;
+    background-color: #ffffff;
+    text-align: left;
+    padding-left: 15px;
+    line-height: 40px;
+    font-weight: bold;
+    font-size: 16px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-radius: 5px;
+    border: 1px solid var(--border-color);
 }
 
-/* 潮汐圖卡片 */
+/* ==========================================
+   4. 跳轉連結與選單按鈕
+========================================== */
+.gallery-link {
+    display: inline-block;
+    background: #e65100;
+    color: white;
+    text-decoration: none;
+    padding: 12px 24px;
+    border-radius: 25px;
+    font-weight: bold;
+    margin: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: background 0.2s;
+}
 
+.gallery-link:hover {
+    background: #bf360c;
+}
+
+.county-select-wrapper {
+    text-align: center; 
+    margin-top: 20px;
+}
+
+.county-select-wrapper label {
+    color: #fff; 
+    font-weight: bold;
+    font-size: 18px;
+    margin-right: 10px;
+}
+
+.county-select-wrapper select {
+    padding: 8px 15px;
+    font-size: 16px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+/* ==========================================
+   5. 潮汐圖表生成區塊 (新舊版融合)
+========================================== */
+/* 動態多圖表專用容器 */
+#all-charts-wrapper {
+    max-height: 75vh;
+    overflow-y: auto;
+    padding: 25px 20px;
+    margin-top: 20px;
+    background: #ffffff;
+    border: 1px solid #dddddd;
+    border-radius: 15px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    width: 90%;
+}
+
+#all-charts-wrapper::-webkit-scrollbar {
+    width: 8px;
+}
+#all-charts-wrapper::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+#all-charts-wrapper::-webkit-scrollbar-thumb {
+    background: #00d4ff;
+    border-radius: 10px;
+}
+
+.chart-card {
+    background: #ffffff;
+    border: 1px solid #eeeeee;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    padding: 10px;
+    margin-bottom: 35px;
+    min-height: 350px;
+}
+
+/* 備用：舊版單圖表樣式 (保留以防其他頁面使用) */
 #tidal-chart-container {
-	width: 90%;
-	max-width: 1200px;
-
-	height: 500px;
-
-	margin: 30px auto;
-
-	padding: 20px;
-
-	border-radius: 20px;
-
-	background: rgba(255, 255, 255, 0.08);
-
-	backdrop-filter: blur(10px);
-
-	box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-
-	overflow: hidden;
+    width: 90%;
+    max-width: 1200px;
+    height: 500px;
+    margin: 30px auto;
+    padding: 20px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
 }
-
-/* Plotly 畫圖區 */
 
 #tidal-chart {
-	width: 100%;
-	height: 100%;
+    width: 100%;
+    height: 100%;
+}
+
+/* ==========================================
+   6. 其他雜項
+========================================== */
+.logout-link {
+    display: inline-block;
+    margin-top: 15px;
+    color: #d32f2f;
+    text-decoration: none;
+    font-weight: bold;
+    background: white;
+    padding: 8px 20px;
+    border-radius: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.logout-link:hover {
+    text-decoration: underline;
 }

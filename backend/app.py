@@ -12,7 +12,6 @@ from dotenv import load_dotenv
 from LLM.LLM import llm_service
 from image_identify.image_identify import analyze_catch_image
 import requests
-from flask import Flask, jsonify
 import urllib3
 import traceback
 import time
@@ -67,7 +66,6 @@ except Exception as e:
 # 帳號系統與基本網頁路由
 # ==========================================
 
-
 @app.route('/')
 def home():
     if 'username' in session:
@@ -90,7 +88,6 @@ def camera_page():
         return render_template('camera.html', username=session['username'])
     flash("請先登入")
     return redirect(url_for('login'))
-
 
 @app.route('/my_spots')
 def my_spots_page():
@@ -167,21 +164,16 @@ def get_tidal_data():
     try:
         current_time = time.time()
 
-        # 💡 核心升級：如果暫存是空的，或者距離上次下載已經超過 1 小時 (3600秒)，才重新下載
         if cwa_cache_data is None or (current_time - cwa_cache_time > 3600):
             print("向氣象署發送請求，下載最新潮汐資料中...")
-            # 💡 把 timeout 延長到 30 秒，給氣象署多一點時間準備大檔案
             response = requests.get(url, verify=False, timeout=30)
             response.raise_for_status()
 
-            # 將下載好的龐大資料存進記憶體中
             cwa_cache_data = response.json()
             cwa_cache_time = current_time
         else:
-            # 開發時可以看終端機印出這行，代表成功秒抓暫存資料！
             print(f"使用暫存資料擷取：{STATION_NAME}")
 
-        # 使用暫存的資料來進行後續處理
         data = cwa_cache_data
 
         records = data.get('records', {})
@@ -191,9 +183,6 @@ def get_tidal_data():
         heights = []
         found_station = False
 
-        # =========================
-        # 開始解析資料 (這裡跟你原本寫的一模一樣)
-        # =========================
         for forecast in tide_forecasts:
             locations = forecast.get('Location', [])
             if isinstance(locations, dict):
@@ -234,9 +223,6 @@ def get_tidal_data():
         if not times:
             return jsonify({'success': False, 'message': '找到測站，但沒有相對應的潮位資料'})
 
-        # =========================
-        # 資料排序 (防毛線球)
-        # =========================
         tide_pairs = zip(times, heights)
         sorted_pairs = sorted(tide_pairs)
         times, heights = zip(*sorted_pairs) if sorted_pairs else ([], [])
@@ -262,7 +248,6 @@ def get_tidal_data():
 # LLM 判斷是否為合理釣點路由
 # ==========================================
 
-
 @app.route('/api/llm/validate_spot', methods=['POST'])
 def validate_spot():
     if 'username' not in session:
@@ -274,14 +259,12 @@ def validate_spot():
     if not spot_name:
         return jsonify({"valid": False, "message": "請輸入釣點名稱"})
 
-    # 嚴格要求 LLM 只回答 True 或 False
     prompt = f"請判斷「{spot_name}」是否為一個合理的台灣釣魚地點（例如真實的地名、漁港、海灣、溪流、防波堤等）？請嚴格只回答 'True' 或 'False'，不要包含任何標點符號或其他說明文字。"
 
     try:
         result = llm_service.chat(prompt)
         if result.get("success"):
             reply = result["reply"].strip().lower()
-            # 判斷 LLM 的回覆是否包含 true
             if 'true' in reply:
                 return jsonify({"valid": True})
             else:
@@ -293,11 +276,10 @@ def validate_spot():
 
 
 # ==========================================
-# LLM 聊天室路由 (保留同學的非同步機制)
+# LLM 聊天室路由
 # ==========================================
 
 llm_tasks = {}
-
 
 @app.route('/api/llm/ask', methods=['POST'])
 def ask_llm_async():
@@ -312,9 +294,13 @@ def ask_llm_async():
 
     task_id = f"llm_{uuid.uuid4().hex[:8]}"
     llm_tasks[task_id] = {"status": "processing"}
+<<<<<<< HEAD
     chat_history = session.get('chat_history', [])
 
     current_history = session.get('chat_history', [])
+=======
+    current_history = session.get('chat_history',[])
+>>>>>>> origin/feature/sort-the-code
 
     def llm_worker(tid, msg, history_data):
         try:
@@ -340,8 +326,11 @@ def ask_llm_async():
     thread.start()
     return jsonify({"status": "success", "task_id": task_id, "message": "AI 正在思考中..."})
 
+<<<<<<< HEAD
 # 未改
 
+=======
+>>>>>>> origin/feature/sort-the-code
 
 @app.route('/api/llm/check_task/<task_id>')
 def check_llm_task(task_id):
@@ -349,9 +338,8 @@ def check_llm_task(task_id):
 
     if task_data.get("status") == "completed" and not task_data.get("saved_to_session"):
         history = session.get('chat_history', [])
-
-        # 把最新的這組問答加入歷史陣列
         history.append({"role": "user", "content": task_data['question']})
+<<<<<<< HEAD
         history.append(
             {"role": "assistant", "content": task_data['raw_reply']})  # 存入純文字
 
@@ -359,12 +347,21 @@ def check_llm_task(task_id):
         session.modified = True
 
         # 做個記號，防止前端重複輪詢時，被重複存進陣列裡
+=======
+        history.append({"role": "assistant", "content": task_data['raw_reply']}) 
+        
+        session['chat_history'] = history
+        session.modified = True
+>>>>>>> origin/feature/sort-the-code
         task_data["saved_to_session"] = True
 
     return jsonify(task_data)
 
+<<<<<<< HEAD
 # 未改
 
+=======
+>>>>>>> origin/feature/sort-the-code
 
 @app.route('/api/llm/result/<task_id>')
 def llm_result_page(task_id):
@@ -372,6 +369,7 @@ def llm_result_page(task_id):
     if not result or result['status'] != 'completed':
         return redirect(url_for('home'))
 
+<<<<<<< HEAD
     history = session.get('chat_history', [])
     history.append({"role": "user", "content": result['question']})
     history.append({"role": "assistant", "content": result['reply']})
@@ -383,12 +381,13 @@ def llm_result_page(task_id):
     ]
     session.modified = True
 
+=======
+>>>>>>> origin/feature/sort-the-code
     return render_template('llm_result.html', question=result['question'], reply=result['reply'])
 
 # ==========================================
-# 圖片上傳與 AI 辨識路由 (修復：回歸 DB 架構 + 同學防呆邏輯)
+# 圖片上傳與 AI 辨識路由 
 # ==========================================
-
 
 @app.route('/api/picture/upload', methods=['POST'])
 def upload_async():
@@ -403,12 +402,8 @@ def upload_async():
 
     if file:
         img_bytes = file.read()
-
         spot_name = request.form.get('spot_name', '未知釣點')
 
-        # ==========================================
-        # 1. 呼叫 ImgBB API 上傳圖片
-        # ==========================================
         try:
             IMGBB_API_KEY = os.getenv('IMGBB_API_KEY')
             if not IMGBB_API_KEY:
@@ -416,8 +411,6 @@ def upload_async():
                 return jsonify({"status": "error", "message": "伺服器設定錯誤"}), 500
 
             print("上傳圖片至 ImgBB 中...")
-
-            # 將圖片轉成 base64 格式（最穩定的傳輸方式）
             b64_img = base64.b64encode(img_bytes).decode('utf-8')
 
             response = requests.post(
@@ -441,9 +434,6 @@ def upload_async():
             print(f"❌ 呼叫 ImgBB API 發生錯誤: {str(e)}")
             return jsonify({"status": "error", "message": f"上傳圖床失敗: {str(e)}"}), 500
 
-        # ==========================================
-        # 2. 將 ImgBB 網址寫入 Firestore
-        # ==========================================
         _, doc_ref = db.collection('fish_records').add({
             'username': session['username'],
             'image_url': img_url,
@@ -456,9 +446,6 @@ def upload_async():
 
         task_id = doc_ref.id
 
-        # ==========================================
-        # 3. 啟動背景 AI 辨識任務
-        # ==========================================
         def ai_worker(tid, raw_bytes):
             import traceback
             print(f"🟢 [任務 {tid}] 背景執行緒啟動！")
@@ -545,71 +532,63 @@ def get_spot_images(spot_name):
     """取得特定釣點的所有已完成辨識的漁獲照片"""
     if 'username' not in session:
         return jsonify({"status": "error", "message": "請先登入"}), 401
-
+        
     try:
-        # 去 Firestore 尋找符合該釣點，且狀態是 completed 的紀錄
         records_ref = db.collection('fish_records')
-        query = records_ref.where('spot_name', '==', spot_name).where(
-            'status', '==', 'completed').stream()
-
+        query = records_ref.where('spot_name', '==', spot_name).where('status', '==', 'completed').stream()
+        
         images = []
         for doc in query:
             data = doc.to_dict()
             images.append({
-                "id": doc.id,  # 新增這行：把 Firestore 的文件 ID 傳給前端
+                "id": doc.id, 
                 "image_url": data.get("image_url"),
                 "fish_type": data.get("fish_type"),
                 "username": data.get("username")
             })
-
+            
         return jsonify({
-            "status": "success",
-            "spot_name": spot_name,
+            "status": "success", 
+            "spot_name": spot_name, 
             "images": images
         })
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
-
-
+    
 @app.route('/api/my_spots', methods=['GET'])
 def get_my_spots():
     """取得當前使用者所有創建過的釣點名稱列表"""
     if 'username' not in session:
         return jsonify({"status": "error", "message": "請先登入"}), 401
-
+        
     try:
-        # 去 Firestore 尋找這個使用者的所有紀錄
         records_ref = db.collection('fish_records')
-        query = records_ref.where(
-            'username', '==', session['username']).stream()
-
-        spots_set = set()  # 用 set 來自動過濾重複的釣點名稱
+        query = records_ref.where('username', '==', session['username']).stream()
+        
+        spots_set = set()
         for doc in query:
             data = doc.to_dict()
             spot = data.get('spot_name')
-            # 確保有釣點名稱且不是預設的未知釣點
             if spot and spot != '未知釣點':
                 spots_set.add(spot)
-
+                
         return jsonify({
-            "status": "success",
+            "status": "success", 
             "spots": list(spots_set)
         })
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
-
-
+    
 @app.route('/api/picture/<doc_id>', methods=['DELETE'])
 def delete_picture(doc_id):
     """刪除單張照片紀錄"""
     if 'username' not in session:
         return jsonify({"status": "error", "message": "請先登入"}), 401
-
+        
     try:
         doc_ref = db.collection('fish_records').document(doc_id)
         doc = doc_ref.get()
-
-        # 為了安全，檢查這張照片是不是這個人的
+        
         if doc.exists and doc.to_dict().get('username') == session['username']:
             doc_ref.delete()
             return jsonify({"status": "success", "message": "照片已刪除"})
@@ -624,19 +603,16 @@ def delete_spot(spot_name):
     """刪除整個釣點（也就是刪除該釣點下的所有照片紀錄）"""
     if 'username' not in session:
         return jsonify({"status": "error", "message": "請先登入"}), 401
-
+        
     try:
-        # 找出該使用者在這個釣點的所有紀錄
         records_ref = db.collection('fish_records')
-        query = records_ref.where('username', '==', session['username']).where(
-            'spot_name', '==', spot_name).stream()
-
-        # 跑迴圈把它們全部刪掉
+        query = records_ref.where('username', '==', session['username']).where('spot_name', '==', spot_name).stream()
+        
         deleted_count = 0
         for doc in query:
             doc.reference.delete()
             deleted_count += 1
-
+            
         return jsonify({"status": "success", "message": f"已刪除釣點及 {deleted_count} 張照片"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -645,4 +621,9 @@ def delete_spot(spot_name):
 if __name__ == '__main__':
     print("✅ 啟動 Flask 伺服器...")
     port = int(os.environ.get("PORT", 7860))
+<<<<<<< HEAD
     app.run(host='0.0.0.0', port=port, debug=is_local)
+=======
+    is_local = os.environ.get("SPACE_ID") is None
+    app.run(host='0.0.0.0', port=port, debug=is_local)
+>>>>>>> origin/feature/sort-the-code
