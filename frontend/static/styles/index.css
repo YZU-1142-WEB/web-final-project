@@ -24,8 +24,9 @@ body {
 	font-family:
 		"Noto Sans TC", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 	display: flex;
-	flex-direction: column;
+	justify-content: center;
 	align-items: center;
+	flex-direction: column;
 	gap: 20px;
 	padding: 20px; /* 縮小預設 padding，適應手機 */
 	margin: 0;
@@ -40,6 +41,7 @@ body {
 	color: var(--primary-blue);
 	text-align: center;
 	letter-spacing: 1px;
+	margin-bottom: 20px;
 }
 
 /* 共用卡片容器 */

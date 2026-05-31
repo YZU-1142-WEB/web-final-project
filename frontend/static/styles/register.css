@@ -1,8 +1,12 @@
-/* frontend/static/styles/register.css */
+/* frontend/static/styles/login.css */
+
+body {
+	background-image: url("../images/background.png");
+}
 
 /* 獨立出來的錯誤訊息樣式 */
 .error-message {
-    color: red;
-    margin-bottom: 10px;
-    font-weight: bold;
+	color: red;
+	margin-bottom: 10px;
+	font-weight: bold;
 }
