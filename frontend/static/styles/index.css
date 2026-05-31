@@ -302,6 +302,8 @@ body {
 	max-width: 800px;
 	box-sizing: border-box;
 	scroll-behavior: smooth;
+	position: relative;
+	width: 100%;
 }
 
 /* 美化滾動條 */
