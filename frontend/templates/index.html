@@ -7,22 +7,15 @@
         
         <link rel="stylesheet" href="{{ url_for('static', filename='styles/index.css') }}" />
 
-        <script src="https://cdn.plot.ly/plotly-2.24.1.min.js" charset="utf-8"></script>
-    </head>
-    <body>
-        
-        <div id="top-box" class="container">
-            <div class="top-content"></div>
-            <div class="top-actions">
-                <a href="{{ url_for('camera_page') }}">
-                    <button class="camera-btn" type="button">
-                        <div class="camera-body">
-                            <div class="camera-lens"></div>
-                        </div>
-                    </button>
-                </a>
-            </div>
-        </div>
+		<script
+			src="https://cdn.plot.ly/plotly-2.24.1.min.js"
+			charset="utf-8"
+		></script>
+	</head>
+	<body>
+		<div id="time-display"></div>
+		<div id="top-box" class="container">
+			<div class="top-content"></div>
 
         <div class="input-group">
             <input id="middle-input" type="text" placeholder="輸入問題詢問 AI..." />
@@ -82,13 +75,380 @@
             <a href="{{ url_for('logout') }}" class="logout-link">登出</a>
         </div>
 
-        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-        <script src="{{ url_for('static', filename='javascript/random.js') }}"></script>
-        <script src="{{ url_for('static', filename='script.js') }}"></script>
-        
-        <script>
-            const cameraPageUrl = "{{ url_for('camera_page') }}";
-        </script>
-        <script src="{{ url_for('static', filename='javascript/index.js') }}"></script>
-    </body>
+				/* 單張卡片樣式 */
+				.chart-card {
+					background: #ffffff; /* 卡片純白底 */
+					border: 1px solid #eeeeee;
+					border-radius: 15px;
+					box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+					padding: 10px;
+				}
+			</style>
+
+			<div
+				id="all-charts-wrapper"
+				class="container"
+				style="
+					max-height: 75vh;
+					overflow-y: auto;
+					padding: 25px 20px;
+					margin-top: 20px;
+					background: #ffffff;
+					border: 1px solid #dddddd;
+					border-radius: 15px;
+					box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+				"
+			></div>
+
+			<a href="{{ url_for('logout') }}">登出</a>
+			<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+			<script src="{{ url_for('static', filename='random.js') }}"></script>
+			<script src="{{ url_for('static', filename='script.js') }}"></script>
+			<script src="{{ url_for('static', filename='date.js') }}"></script>
+
+			<script>
+				function checkAiTaskStatus() {
+					// 從瀏覽器記憶體取出任務 ID
+					const taskId = localStorage.getItem("fish_task_id");
+
+					// 如果沒有任務，就什麼都不做
+					if (!taskId) return;
+
+					console.log("偵測到背景辨識任務中，ID:", taskId);
+
+					// 設定定時器，每 3 秒詢問一次後端
+					const interval = setInterval(async () => {
+						try {
+							const response = await fetch(
+								`/api/check_task/${taskId}`,
+							);
+							const data = await response.json();
+
+							if (data.status === "completed") {
+								console.log("辨識完成！準備跳轉...");
+								clearInterval(interval); // 停止定時器
+								localStorage.removeItem("fish_task_id"); // 刪除任務 ID
+
+								// 自動跳轉到結果頁面
+								window.location.href = `/result/${taskId}`;
+							} else if (data.status === "not_found") {
+								// 如果後端找不到這個任務，可能發生錯誤，停止詢問
+								clearInterval(interval);
+								localStorage.removeItem("fish_task_id");
+							}
+						} catch (error) {
+							console.error("輪詢時發生錯誤:", error);
+						}
+					}, 3000);
+				}
+
+				// 當首頁載入完成時立刻執行檢查
+				document.addEventListener(
+					"DOMContentLoaded",
+					checkAiTaskStatus,
+				);
+			</script>
+
+			<script>
+				// ==========================================
+				// 1. 建立縣市對應「所有測站名稱」的資料庫 (全台精準對應版)
+				// ==========================================
+				const stationMapping = {
+					// 北部
+					基隆市: [
+						{ name: "基隆港/和平島", val: "基隆市中正區" },
+						{ name: "外木山", val: "基隆市中山區" },
+					],
+					新北市: [
+						{ name: "淡水", val: "新北市淡水區" },
+						{ name: "富貴角 (石門)", val: "新北市石門區" },
+						{ name: "野柳/萬里", val: "新北市萬里區" },
+						{ name: "鼻頭角 (瑞芳)", val: "新北市瑞芳區" },
+						{ name: "龍洞/澳底 (貢寮)", val: "新北市貢寮區" },
+					],
+					桃園市: [
+						{ name: "竹圍 (大園)", val: "桃園市大園區" },
+						{ name: "永安 (新屋)", val: "桃園市新屋區" },
+					],
+					新竹: [
+						{ name: "新竹漁港", val: "新竹市北區" },
+						{ name: "坡頭 (新豐)", val: "新竹縣新豐鄉" },
+					],
+
+					// 中部
+					苗栗縣: [
+						{ name: "龍鳳 (竹南)", val: "苗栗縣竹南鎮" },
+						{ name: "外埔 (後龍)", val: "苗栗縣後龍鎮" },
+						{ name: "苑裡", val: "苗栗縣苑裡鎮" },
+					],
+					臺中市: [
+						{ name: "臺中港/梧棲", val: "臺中市梧棲區" },
+						{ name: "大甲", val: "臺中市大甲區" },
+					],
+					彰化縣: [
+						{ name: "鹿港", val: "彰化縣鹿港鎮" },
+						{ name: "王功 (芳苑)", val: "彰化縣芳苑鄉" },
+					],
+					雲林縣: [
+						{ name: "麥寮", val: "雲林縣麥寮鄉" },
+						{ name: "箔子寮 (四湖)", val: "雲林縣四湖鄉" },
+					],
+
+					// 南部
+					嘉義縣: [
+						{ name: "東石", val: "嘉義縣東石鄉" },
+						{ name: "布袋", val: "嘉義縣布袋鎮" },
+					],
+					臺南市: [
+						{ name: "將軍", val: "臺南市將軍區" },
+						{ name: "安平", val: "臺南市安平區" },
+					],
+					高雄市: [
+						{ name: "興達 (茄萣)", val: "高雄市茄萣區" },
+						{ name: "彌陀", val: "高雄市彌陀區" },
+						{ name: "旗津", val: "高雄市旗津區" },
+					],
+					屏東縣: [
+						{ name: "東港", val: "屏東縣東港鎮" },
+						{ name: "小琉球", val: "屏東縣琉球鄉" },
+						{ name: "後壁湖 (恆春)", val: "屏東縣恆春鎮" },
+					],
+
+					// 東部
+					宜蘭縣: [
+						{ name: "烏石/大溪 (頭城)", val: "宜蘭縣頭城鎮" },
+						{ name: "蘇澳", val: "宜蘭縣蘇澳鎮" },
+					],
+					花蓮縣: [
+						{ name: "花蓮港", val: "花蓮縣花蓮市" },
+						{ name: "石梯坪 (豐濱)", val: "花蓮縣豐濱鄉" },
+					],
+					臺東縣: [
+						{ name: "成功", val: "臺東縣成功鎮" },
+						{ name: "富岡 (臺東市)", val: "臺東縣臺東市" },
+						{ name: "綠島", val: "臺東縣綠島鄉" },
+						{ name: "蘭嶼", val: "臺東縣蘭嶼鄉" },
+					],
+
+					// 外島
+					澎湖縣: [
+						{ name: "馬公", val: "澎湖縣馬公市" },
+						{ name: "吉貝 (白沙)", val: "澎湖縣白沙鄉" },
+						{ name: "七美", val: "澎湖縣七美鄉" },
+					],
+					金門縣: [{ name: "金門 (金城)", val: "金門縣金城鎮" }],
+					連江縣: [
+						{ name: "南竿 (馬祖)", val: "連江縣南竿鄉" },
+						{ name: "東引", val: "連江縣東引鄉" },
+					],
+				};
+
+				// ==========================================
+				// 2. 核心功能：根據選定的縣市，一口氣畫出所有圖表
+				// ==========================================
+				async function renderAllCountyCharts() {
+					const selectedCounty =
+						document.getElementById("county-selector").value;
+					const stations = stationMapping[selectedCounty];
+
+					const wrapper =
+						document.getElementById("all-charts-wrapper");
+					wrapper.innerHTML = "";
+
+					for (let i = 0; i < stations.length; i++) {
+						const stationObj = stations[i];
+						const displayName = stationObj.name;
+						const queryValue = stationObj.val;
+
+						const chartId = `tidal-chart-${i}`;
+
+						const chartDiv = document.createElement("div");
+						chartDiv.id = chartId;
+						chartDiv.className = "chart-card";
+						chartDiv.style.marginBottom = "35px";
+						chartDiv.style.minHeight = "350px";
+						wrapper.appendChild(chartDiv);
+
+						try {
+							const response = await fetch(
+								`/api/get_tidal_data?station=${queryValue}`,
+							);
+							const data = await response.json();
+
+							if (!data.success) {
+								chartDiv.innerHTML = `<p style="color:#ff6b6b; text-align:center; padding-top:150px;">❌ 無法取得 ${displayName} 的潮汐資料: ${data.message}</p>`;
+								continue;
+							}
+
+							const trace = {
+								x: data.times,
+								y: data.heights,
+								mode: "lines+markers",
+								name: "預報潮高",
+								line: {
+									shape: "spline",
+									color: "#00d4ff",
+									width: 3,
+								},
+								marker: { size: 6, color: "#007bb5" },
+								fill: "tozeroy",
+								fillcolor: "rgba(0, 212, 255, 0.2)",
+								type: "scatter",
+							};
+
+							const layout = {
+								title: {
+									text: `🌊 ${displayName} 潮汐預報曲線`,
+									font: {
+										color: "#333333",
+										size: 20,
+										family: "Arial, sans-serif",
+									},
+								},
+								paper_bgcolor: "#ffffff",
+								plot_bgcolor: "#ffffff",
+								font: { color: "#555" },
+								margin: { l: 45, r: 20, t: 50, b: 60 },
+								xaxis: {
+									title: "時間",
+									gridcolor: "#e5e5e5",
+									tickangle: 30,
+									zeroline: false,
+								},
+								yaxis: {
+									title: "潮高 (cm)",
+									gridcolor: "#e5e5e5",
+									zerolinecolor: "#999",
+								},
+							};
+
+							const config = {
+								responsive: true,
+								displayModeBar: false,
+							};
+							Plotly.newPlot(chartId, [trace], layout, config);
+						} catch (error) {
+							console.error(
+								`${displayName} 圖表載入失敗:`,
+								error,
+							);
+							chartDiv.innerHTML = `<p style="color:#ff6b6b; text-align:center;">${displayName} 載入失敗</p>`;
+						}
+					}
+				}
+
+				// ==========================================
+				// 3. 綁定事件與初始化
+				// ==========================================
+				document.addEventListener("DOMContentLoaded", () => {
+					const countySelect =
+						document.getElementById("county-selector");
+					renderAllCountyCharts();
+
+					if (countySelect) {
+						countySelect.addEventListener(
+							"change",
+							renderAllCountyCharts,
+						);
+					}
+				});
+			</script>
+
+			<script>
+				// 綁定加入釣點按鈕事件
+				document
+					.getElementById("add-spot-btn")
+					?.addEventListener("click", async () => {
+						const spotName = document
+							.getElementById("spot-input")
+							.value.trim();
+						if (!spotName) {
+							alert("請輸入釣點名稱！");
+							return;
+						}
+
+						const btn = document.getElementById("add-spot-btn");
+						const originalText = btn.innerText;
+						btn.disabled = true;
+
+						try {
+							// ==========================================
+							// 步驟 1：先檢查是否已經建立過這個釣點 (新增模糊比對防呆)
+							// ==========================================
+							btn.innerText = "檢查釣點紀錄中...";
+
+							const spotsResponse = await fetch("/api/my_spots");
+							const spotsData = await spotsResponse.json();
+
+							if (spotsData.status === "success") {
+								// 💡 模糊比對尋找相似的釣點
+								const matchedSpot = spotsData.spots.find(
+									(spot) =>
+										spot.includes(spotName) ||
+										spotName.includes(spot),
+								);
+
+								if (matchedSpot) {
+									// 防呆觸發：已經有相似的這個釣點了
+									alert(
+										`通知：系統發現您已經建立過「${matchedSpot}」，將為您整合紀錄並開啟相機。`,
+									);
+
+									// 💡 重點：把存入瀏覽器的名稱改成「已經存在的那個名字」，這樣照片才會放進同一個圖庫
+									localStorage.setItem(
+										"current_fishing_spot",
+										matchedSpot,
+									);
+									window.location.href =
+										"{{ url_for('camera_page') }}";
+									return; // 🛑 結束函數
+								}
+							}
+							// 💡 修正 2：已刪除這裡多餘的 }
+
+							// ==========================================
+							// 步驟 2：如果沒建立過，才呼叫 LLM 驗證 (你原本的邏輯)
+							// ==========================================
+							btn.innerText = "AI 驗證釣點中...";
+							const response = await fetch(
+								"/api/llm/validate_spot",
+								{
+									method: "POST",
+									headers: {
+										"Content-Type": "application/json",
+									},
+									body: JSON.stringify({
+										spot_name: spotName,
+									}),
+								},
+							);
+
+							const data = await response.json();
+
+							if (data.valid) {
+								// 驗證成功：將釣點名稱存入瀏覽器，並跳轉至上傳頁
+								localStorage.setItem(
+									"current_fishing_spot",
+									spotName,
+								);
+								window.location.href =
+									"{{ url_for('camera_page') }}";
+							} else {
+								// 驗證失敗防呆
+								alert(data.message || "請輸入正確釣點名稱");
+							}
+						} catch (error) {
+							console.error("驗證發生錯誤:", error);
+							alert("連線發生錯誤，請稍後再試！");
+						} finally {
+							// 確保無論成功或失敗，按鈕狀態都會恢復
+							if (btn) {
+								btn.innerText = originalText;
+								btn.disabled = false;
+							}
+						}
+					});
+			</script>
+		</div>
+	</body>
 </html>
