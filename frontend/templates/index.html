@@ -16,19 +16,13 @@
             <div class="top-content"></div>
         </div>
 
-        <div class="container section-card">
-            <h3 class="section-title">🤖 AI 智慧諮詢</h3>
-            <div class="input-group">
-                <input
-                    id="middle-input"
-                    type="text"
-                    placeholder="輸入問題詢問 AI..."
-                />
-                <button id="require-LLM-button">
-                    <canvas id="llm-button-icon" width="273" height="269"></canvas>
-                </button>   
-            </div>
-        </div>
+		<nav class="sticky-nav">
+			<a href="#fish-container" class="nav-item">🎣 快速抽魚</a>
+			<a href="#section-spot" class="nav-item">📍 釣點管理</a>
+			<a href="#section-tide" class="nav-item">🌊 區域潮汐</a>
+			<a href="#section-ai" class="nav-item">🤖 AI 諮詢</a>
+		</nav>
+
 
         <div id="fish-container" class="container section-card">
             <h3 class="section-title">🎣 魚種快速探索</h3>
@@ -38,7 +32,7 @@
             </div>
         </div>
 
-        <div class="container section-card">
+        <div id="section-spot" class="container section-card">
             <h3 class="section-title">📍 釣點紀錄管理</h3>
             <div class="input-group">
                 <input
@@ -53,7 +47,7 @@
             </div>
         </div>
 
-        <div class="container section-card">
+        <div id="section-tide" class="container section-card">
             <h3 class="section-title">🌊 區域潮汐預報</h3>
             <div class="county-select-wrapper">
                 <label for="county-selector">選擇縣市：</label>
@@ -90,6 +84,20 @@
             </div>
             
             <div id="all-charts-wrapper" class="charts-scroll-container"></div>
+        </div>
+
+		<div id="section-ai" class="container section-card">
+            <h3 class="section-title">🤖 AI 智慧諮詢</h3>
+            <div class="input-group">
+                <input
+                    id="middle-input"
+                    type="text"
+                    placeholder="輸入問題詢問 AI..."
+                />
+                <button id="require-LLM-button">
+                    <canvas id="llm-button-icon" width="273" height="269"></canvas>
+                </button>   
+            </div>
         </div>
 
         <div class="container logout-container">
