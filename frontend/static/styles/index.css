@@ -4,70 +4,73 @@
    1. 顏色變數與全域基礎設定 (海洋風)
 ========================================== */
 :root {
-    --primary-blue: #0077b6; /* 主題藍 */
-    --dark-blue: #023e8a; /* 深海藍 (Hover) */
-    --light-blue: #f0f8ff; /* 輕透天藍 (狀態背景) */
-    --accent-orange: #f77f00; /* 醒目橘色 (按鈕) */
-    --accent-orange-hover: #d66c00;
-    --bg-color: #f4f7fa; /* 柔和的灰藍色背景 */
-    --card-bg: #ffffff; /* 卡片純白背景 */
-    --border-color: #e2e8f0;
-    --text-main: #2b2d42; /* 深色文字 */
-    --text-muted: #64748b;
-    --border-radius-lg: 16px;
-    --border-radius-sm: 12px; /* 調整為一致的中等圓角 */
-    --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.03);
-    --shadow-md: 0 8px 24px rgba(0, 119, 182, 0.08);
+	--primary-blue: #0077b6; /* 主題藍 */
+	--dark-blue: #023e8a; /* 深海藍 (Hover) */
+	--light-blue: #f0f8ff; /* 輕透天藍 (狀態背景) */
+	--accent-orange: #f77f00; /* 醒目橘色 (按鈕) */
+	--accent-orange-hover: #d66c00;
+	--bg-color: #f4f7fa; /* 柔和的灰藍色背景 */
+	--card-bg: #ffffff; /* 卡片純白背景 */
+	--border-color: #e2e8f0;
+	--text-main: #2b2d42; /* 深色文字 */
+	--text-muted: #64748b;
+	--border-radius-lg: 16px;
+	--border-radius-sm: 12px; /* 調整為一致的中等圓角 */
+	--shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.03);
+	--shadow-md: 0 8px 24px rgba(0, 119, 182, 0.08);
 }
 
 body {
-    font-family: "Noto Sans TC", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 24px;
-    padding: 30px 20px;
-    margin: 0;
-    background-color: var(--bg-color);
-    color: var(--text-main);
-    min-height: 100vh;
-    box-sizing: border-box;
+	font-family:
+		"Noto Sans TC", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 24px;
+	padding: 30px 20px;
+	margin: 0;
+	background-color: var(--bg-color);
+	color: var(--text-main);
+	min-height: 100vh;
+	box-sizing: border-box;
 }
 
 #time-display {
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: var(--primary-blue);
-    text-align: center;
-    letter-spacing: 1px;
+	font-size: 1.6rem;
+	font-weight: 700;
+	color: var(--primary-blue);
+	text-align: center;
+	letter-spacing: 1px;
 }
 
 /* 共用卡片容器 */
 .container {
-    background-color: var(--card-bg);
-    border: 1px solid var(--border-color);
-    box-shadow: var(--shadow-sm);
-    border-radius: var(--border-radius-lg);
-    box-sizing: border-box;
-    width: 100%;
-    max-width: 775px; /* 收緊最大寬度，聚焦操作視野 */
-    padding: 24px;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+	background-color: var(--card-bg);
+	border: 1px solid var(--border-color);
+	box-shadow: var(--shadow-sm);
+	border-radius: var(--border-radius-lg);
+	box-sizing: border-box;
+	width: 100%;
+	max-width: 700px; /* 收緊最大寬度，聚焦操作視野 */
+	padding: 24px;
+	transition:
+		transform 0.2s ease,
+		box-shadow 0.2s ease;
 }
 
 .container:hover {
-    box-shadow: var(--shadow-md);
+	box-shadow: var(--shadow-md);
 }
 
 /* 內頁區塊小標題 */
 .section-title {
-    margin: 0 0 16px 0;
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--text-main);
-    display: flex;
-    align-items: center;
-    gap: 8px;
+	margin: 0 0 16px 0;
+	font-size: 18px;
+	font-weight: 700;
+	color: var(--text-main);
+	display: flex;
+	align-items: center;
+	gap: 8px;
 }
 
 .sticky-nav {
@@ -113,309 +116,298 @@ body {
    2. 首頁頂部橫幅區塊
 ========================================== */
 #top-box {
-    padding: 0;
-    height: 180px; /* 修正原本過高佔畫面的問題 */
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+	padding: 0;
+	height: 180px; /* 修正原本過高佔畫面的問題 */
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
 }
 
 .top-content {
-    flex: 1;
-    background-image: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+	flex: 1;
+	background-image: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
 /* ==========================================
    3. 表單元件與控制群組
 ========================================== */
 .input-group {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    width: 100%;
+	display: flex;
+	gap: 12px;
+	align-items: center;
+	width: 100%;
 }
 
 #middle-input,
 #spot-input {
-    flex: 1;
-    height: 48px;
-    font-size: 15px;
-    padding: 0 16px;
-    border: 1.5px solid var(--border-color);
-    border-radius: var(--border-radius-sm); /* 改用一致圓角 */
-    outline: none;
-    transition: all 0.25s ease;
-    background-color: #ffffff;
-    color: var(--text-main);
-    box-sizing: border-box;
+	flex: 1;
+	height: 48px;
+	font-size: 15px;
+	padding: 0 16px;
+	border: 1.5px solid var(--border-color);
+	border-radius: var(--border-radius-sm); /* 改用一致圓角 */
+	outline: none;
+	transition: all 0.25s ease;
+	background-color: #ffffff;
+	color: var(--text-main);
+	box-sizing: border-box;
 }
 
 #middle-input:focus,
 #spot-input:focus {
-    border-color: var(--primary-blue);
-    box-shadow: 0 0 0 3px rgba(0, 119, 182, 0.15);
+	border-color: var(--primary-blue);
+	box-shadow: 0 0 0 3px rgba(0, 119, 182, 0.15);
 }
 
 /* ==========================================
    ★ 這裡還原為你原本的 LLM 按鈕設計 ★
 ========================================== */
 #require-LLM-button {
-    margin-right: 10px;
-    padding: 0;                  
-    background-color: transparent; /* 恢復透明背景 */
-    border: none;                 
-    height: 50px;                
-    width: 50px;                
-    cursor: pointer;
-    display: flex;                
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.3s ease; /* 保留你設定的動畫過渡時間 */
+	margin-right: 10px;
+	padding: 0;
+	background-color: transparent; /* 恢復透明背景 */
+	border: none;
+	height: 50px;
+	width: 50px;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: transform 0.3s ease; /* 保留你設定的動畫過渡時間 */
 }
 
 /* 圖片按鈕專屬的 Hover 效果（滑鼠移過去稍微放大就好，不需要變色） */
 #require-LLM-button:hover {
-    transform: scale(1.1); 
-    background-color: transparent; 
+	transform: scale(1.1);
+	background-color: transparent;
 }
 
 #llm-button-icon {
-    height: 40px; 
-    width: auto;
-    display: block;
-    filter: none; /* 移除我剛剛加的反白濾鏡，保持你原本的圖案顏色 */
+	height: 40px;
+	width: auto;
+	display: block;
+	filter: none; /* 移除我剛剛加的反白濾鏡，保持你原本的圖案顏色 */
 }
 
 /* 一般功能按鈕 */
 #add-spot-btn,
 #random-button {
-    padding: 0 24px;
-    height: 48px;
-    background-color: var(--primary-blue);
-    color: white;
-    border: none;
-    border-radius: var(--border-radius-sm);
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    white-space: nowrap;
+	padding: 0 24px;
+	height: 48px;
+	background-color: var(--primary-blue);
+	color: white;
+	border: none;
+	border-radius: var(--border-radius-sm);
+	font-size: 15px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	white-space: nowrap;
 }
 
 #add-spot-btn:hover,
 #random-button:hover {
-    background-color: var(--dark-blue);
-    box-shadow: 0 4px 12px rgba(2, 62, 138, 0.2);
+	background-color: var(--dark-blue);
+	box-shadow: 0 4px 12px rgba(2, 62, 138, 0.2);
 }
 
 /* ==========================================
    4. 抽魚功能專屬優化
 ========================================== */
 .fish-action-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    width: 100%;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	width: 100%;
 }
 
 #display-area {
-    flex: 1;
-    height: 48px;
-    background-color: var(--light-blue);
-    color: var(--primary-blue);
-    text-align: center;
-    line-height: 48px;
-    font-weight: 600;
-    font-size: 15px;
-    border-radius: var(--border-radius-sm);
-    border: 1.5px solid rgba(0, 119, 182, 0.2); /* 移除不穩定的虛線，改用精緻實線邊框 */
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    box-sizing: border-box;
+	flex: 1;
+	height: 48px;
+	background-color: var(--light-blue);
+	color: var(--primary-blue);
+	text-align: center;
+	line-height: 48px;
+	font-weight: 600;
+	font-size: 15px;
+	border-radius: var(--border-radius-sm);
+	border: 1.5px solid rgba(0, 119, 182, 0.2); /* 移除不穩定的虛線，改用精緻實線邊框 */
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	box-sizing: border-box;
 }
 
 /* ==========================================
    5. 釣點圖庫與跳轉設計
 ========================================== */
 .gallery-action-wrapper {
-    text-align: center;
-    margin-top: 16px;
+	text-align: center;
+	margin-top: 16px;
 }
 
 .gallery-link {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--accent-orange);
-    color: white;
-    text-decoration: none;
-    height: 46px;
-    padding: 0 32px;
-    border-radius: 23px; /* 膠囊形狀保有特殊動線導向 */
-    font-weight: 600;
-    font-size: 15px;
-    box-shadow: 0 4px 12px rgba(247, 127, 0, 0.2);
-    transition: all 0.2s ease;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--accent-orange);
+	color: white;
+	text-decoration: none;
+	height: 46px;
+	padding: 0 32px;
+	border-radius: 23px; /* 膠囊形狀保有特殊動線導向 */
+	font-weight: 600;
+	font-size: 15px;
+	box-shadow: 0 4px 12px rgba(247, 127, 0, 0.2);
+	transition: all 0.2s ease;
 }
 
 .gallery-link:hover {
-    background: var(--accent-orange-hover);
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(247, 127, 0, 0.3);
+	background: var(--accent-orange-hover);
+	transform: translateY(-1px);
+	box-shadow: 0 6px 16px rgba(247, 127, 0, 0.3);
 }
 
 /* ==========================================
    6. 縣市選擇與圖表展示
 ========================================== */
 .county-select-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 16px;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 16px;
 }
 
 .county-select-wrapper label {
-    color: var(--text-main);
-    font-weight: 600;
-    font-size: 15px;
-    white-space: nowrap;
+	color: var(--text-main);
+	font-weight: 600;
+	font-size: 15px;
+	white-space: nowrap;
 }
 
 .county-select-wrapper select {
-    flex: 1;
-    height: 44px;
-    padding: 0 12px;
-    font-size: 15px;
-    border: 1.5px solid var(--border-color);
-    border-radius: var(--border-radius-sm);
-    background-color: #ffffff;
-    cursor: pointer;
-    outline: none;
-    transition: border-color 0.2s;
-    color: var(--text-main);
+	flex: 1;
+	height: 44px;
+	padding: 0 12px;
+	font-size: 15px;
+	border: 1.5px solid var(--border-color);
+	border-radius: var(--border-radius-sm);
+	background-color: #ffffff;
+	cursor: pointer;
+	outline: none;
+	transition: border-color 0.2s;
+	color: var(--text-main);
 }
 
 .county-select-wrapper select:focus {
-    border-color: var(--primary-blue);
+	border-color: var(--primary-blue);
 }
 
 /* 潮汐圖表外部容器 */
 .charts-scroll-container {
-    max-height: 95vh;
-    overflow-y: auto;
-    padding-right: 4px;
-    margin-top: 12px;
-    scroll-behavior: smooth;
+	max-height: 55vh;
+	overflow-y: auto;
+	padding-right: 4px;
+	margin-top: 12px;
+	scroll-behavior: smooth;
 }
 
 /* 美化滾動條 */
 .charts-scroll-container::-webkit-scrollbar {
-    width: 6px;
+	width: 6px;
 }
 .charts-scroll-container::-webkit-scrollbar-track {
-    background: #f1f5f9;
-    border-radius: 3px;
+	background: #f1f5f9;
+	border-radius: 3px;
 }
 .charts-scroll-container::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 3px;
+	background: #cbd5e1;
+	border-radius: 3px;
 }
 .charts-scroll-container::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
+	background: #94a3b8;
 }
 
 .chart-card {
-    background: #ffffff;
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius-sm);
-    padding: 16px;
-    box-sizing: border-box;
+	background: #ffffff;
+	border: 1px solid var(--border-color);
+	border-radius: var(--border-radius-sm);
+	padding: 16px;
+	box-sizing: border-box;
 }
 
 /* ==========================================
    7. 登出管理
 ========================================== */
 .logout-container {
-    background: transparent;
-    border: none;
-    box-shadow: none;
-    padding: 0;
-    text-align: center;
+	background: transparent;
+	border: none;
+	box-shadow: none;
+	padding: 0;
+	text-align: center;
 }
 .logout-container:hover {
-    box-shadow: none;
+	box-shadow: none;
 }
 
 .logout-link {
-    display: inline-block;
-    color: #ef4444;
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 14px;
-    padding: 8px 24px;
-    border-radius: 20px;
-    border: 1.5px solid #fecaca;
-    transition: all 0.2s ease;
-    background-color: #fff;
+	display: inline-block;
+	color: #ef4444;
+	text-decoration: none;
+	font-weight: 600;
+	font-size: 14px;
+	padding: 8px 24px;
+	border-radius: 20px;
+	border: 1.5px solid #fecaca;
+	transition: all 0.2s ease;
+	background-color: #fff;
 }
 
 .logout-link:hover {
-    background: #ef4444;
-    color: white;
-    border-color: #ef4444;
+	background: #ef4444;
+	color: white;
+	border-color: #ef4444;
 }
 
 /* ==========================================
    8. RWD 手機版自適應彈性優化
 ========================================== */
 @media (max-width: 600px) {
-    body {
-        padding: 16px 12px;
-        gap: 16px;
-    }
+	body {
+		padding: 16px 12px;
+		gap: 16px;
+	}
 
-    .container {
-        padding: 16px;
-    }
+	.container {
+		padding: 16px;
+	}
 
-    .input-group,
-    .fish-action-row,
-    .county-select-wrapper {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 10px;
-    }
+	.input-group,
+	.fish-action-row,
+	.county-select-wrapper {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 10px;
+	}
 
-    #middle-input,
-    #spot-input,
-    #require-LLM-button,
-    #add-spot-btn,
-    #random-button,
-    .county-select-wrapper select {
-        width: 100%;
-    }
-    
-    #require-LLM-button {
-        justify-content: center;
-    }
+	#middle-input,
+	#spot-input,
+	#require-LLM-button,
+	#add-spot-btn,
+	#random-button,
+	.county-select-wrapper select {
+		width: 100%;
+	}
 
-    .gallery-link {
-        width: 100%;
-        box-sizing: border-box;
-    }
-	.sticky-nav {
-        top: 8px;           
-        padding: 6px 10px;
-        gap: 2px;           
-        max-width: 95%;     
-    }
-    
-    .nav-item {
-        font-size: 12px;    
-        padding: 6px 10px;
-    }
+	#require-LLM-button {
+		justify-content: center;
+	}
+
+	.gallery-link {
+		width: 100%;
+		box-sizing: border-box;
+	}
 }
