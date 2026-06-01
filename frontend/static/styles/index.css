@@ -71,9 +71,9 @@ body {
 }
 
 .sticky-nav {
-    position: -webkit-sticky; 
-    position: sticky;      
-    top: 15px;               
+    position: fixed;   
+    top: 15px;  
+	right: 15px;             
     z-index: 9999;           
     display: flex;
     justify-content: center;
@@ -81,15 +81,15 @@ body {
     gap: 8px;                
     background: rgba(255, 255, 255, 0.85);
     -webkit-backdrop-filter: blur(10px);    
-    backdrop-filter: blur(10px);           
+    backdrop-filter: blur(10px);       
     padding: 8px 16px;
     border-radius: 30px;     
     border: 1px solid rgba(226, 232, 240, 0.8);
     box-shadow: 0 4px 20px rgba(0, 73, 124, 0.08);
-    width: 100%;
+    width: auto;
     max-width: 550px;        
     box-sizing: border-box;
-    margin: 10px auto 5px auto; 
+    margin: 0; 
 }
 
 .nav-item {
@@ -97,7 +97,7 @@ body {
     color: var(--text-main);
     font-weight: 600;
     font-size: 14px;
-    padding: 8px 14px;
+    padding: 8px 7px;
     border-radius: 20px;
     transition: all 0.25s ease;
     white-space: nowrap; /* 防止手機版文字折行擠壓 */
@@ -159,9 +159,7 @@ body {
     box-shadow: 0 0 0 3px rgba(0, 119, 182, 0.15);
 }
 
-/* ==========================================
-   ★ 這裡還原為你原本的 LLM 按鈕設計 ★
-========================================== */
+
 #require-LLM-button {
     margin-right: 10px;
     padding: 0;                  
