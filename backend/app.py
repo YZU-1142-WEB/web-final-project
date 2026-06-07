@@ -267,6 +267,79 @@ def validate_spot():
             return jsonify({"valid": False, "message": "LLM 驗證發生錯誤"})
     except Exception as e:
         return jsonify({"valid": False, "message": str(e)})
+    
+# ==========================================
+# 釣點座標儲存與讀取路由 (新增功能)
+# ==========================================
+
+@app.route('/api/spots/save', methods=['POST'])
+def save_spot_coords():
+    """儲存或更新釣點的經緯度座標"""
+    if 'username' not in session:
+        return jsonify({"status": "error", "message": "請先登入"}), 401
+
+    data = request.get_json()
+    spot_name = data.get('spot_name', '').strip()
+    lat = data.get('lat')
+    lng = data.get('lng')
+
+    if not spot_name or lat is None or lng is None:
+        return jsonify({"status": "error", "message": "資料不齊全，請提供名稱與經緯度座標"}), 400
+
+    try:
+        spots_ref = db.collection('fishing_spots')
+        # 檢查該使用者是否已建立過同名釣點，有則更新，無則新增
+        query = spots_ref.where('username', '==', session['username']).where('spot_name', '==', spot_name).limit(1).stream()
+        
+        doc_id = None
+        for doc in query:
+            doc_id = doc.id
+            break
+
+        spot_data = {
+            'username': session['username'],
+            'spot_name': spot_name,
+            'lat': float(lat),
+            'lng': float(lng),
+            'updated_at': firestore.SERVER_TIMESTAMP
+        }
+
+        if doc_id:
+            spots_ref.document(doc_id).update(spot_data)
+            print(f"🔄 已更新釣點座標: {spot_name} ({lat}, {lng})")
+        else:
+            spot_data['created_at'] = firestore.SERVER_TIMESTAMP
+            spots_ref.add(spot_data)
+            print(f"✨ 已新增釣點座標: {spot_name} ({lat}, {lng})")
+
+        return jsonify({"status": "success", "message": "釣點座標儲存成功！"})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/spots/with_coords', methods=['GET'])
+def get_spots_with_coords():
+    """讀取當前使用者所有包含座標的釣點"""
+    if 'username' not in session:
+        return jsonify({"status": "error", "message": "請先登入"}), 401
+
+    try:
+        spots_ref = db.collection('fishing_spots')
+        query = spots_ref.where('username', '==', session['username']).stream()
+
+        spots_list = []
+        for doc in query:
+            data = doc.to_dict()
+            spots_list.append({
+                "spot_name": data.get("spot_name"),
+                "lat": data.get("lat"),
+                "lng": data.get("lng")
+            })
+
+        return jsonify({"status": "success", "spots": spots_list})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 # ==========================================
@@ -589,22 +662,32 @@ def delete_picture(doc_id):
 
 @app.route('/api/spots/<spot_name>', methods=['DELETE'])
 def delete_spot(spot_name):
-    """刪除整個釣點（也就是刪除該釣點下的所有照片紀錄）"""
+    """刪除整個釣點（也就是刪除該釣點下的所有照片紀錄，並同步清理地圖座標）"""
     if 'username' not in session:
         return jsonify({"status": "error", "message": "請先登入"}), 401
 
     try:
+        # 1. 刪除該釣點下的所有漁獲照片紀錄 (你原本寫好的部分)
         records_ref = db.collection('fish_records')
-        query = records_ref.where('username', '==', session['username']).where(
-            'spot_name', '==', spot_name).stream()
+        query = records_ref.where('username', '==', session['username']).where('spot_name', '==', spot_name).stream()
 
         deleted_count = 0
         for doc in query:
             doc.reference.delete()
             deleted_count += 1
 
-        return jsonify({"status": "success", "message": f"已刪除釣點及 {deleted_count} 張照片"})
+        # 2. 💡【新加入的部分】同步刪除 fishing_spots 集合裡該釣點的經緯度座標紀錄
+        spots_ref = db.collection('fishing_spots')
+        spots_query = spots_ref.where('username', '==', session['username']).where('spot_name', '==', spot_name).stream()
+        
+        for doc in spots_query:
+            doc.reference.delete()
+            print(f"🗑️ 已成功同步清除地圖座標紀錄: {spot_name}")
+
+        return jsonify({"status": "success", "message": f"已成功刪除釣點、座標及 {deleted_count} 張照片"})
+        
     except Exception as e:
+        traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
