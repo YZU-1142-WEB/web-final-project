@@ -4,6 +4,7 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>魚類辨識首頁</title>
+		<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 		<link
 			rel="stylesheet"
 			href="{{ url_for('static', filename='styles/index.css') }}"
@@ -40,6 +41,9 @@
 
 		<div class="container section-card">
 			<h3 class="section-title">📍 釣點紀錄管理</h3>
+			<p style="font-size: 13px; color: #64748b; margin: -8px 0 12px 0;">
+    			💡 提示：請先在下方地圖點擊選取「經緯度座標」，再輸入名稱加入釣點。
+			</p>
 			<div class="input-group">
 				<input
 					id="spot-input"
@@ -48,6 +52,7 @@
 				/>
 				<button id="add-spot-btn">加入釣點</button>
 			</div>
+			<div id="main-fishing-map" style="height: 350px; width: 100%; border-radius: 12px; margin-top: 16px; border: 1.5px solid #e2e8f0; z-index: 1;"></div>
 			<div class="gallery-action-wrapper">
 				<a href="/my_spots" class="gallery-link">📍 顯示我的釣點圖庫</a>
 			</div>
@@ -97,6 +102,7 @@
 		</div>
 
 		<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+		<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 		<script src="{{ url_for('static', filename='javascript/random.js') }}"></script>
 		<script src="{{ url_for('static', filename='javascript/script.js') }}"></script>
 		<script src="{{ url_for('static', filename='date.js') }}"></script>
@@ -309,6 +315,9 @@
 		</script>
 
 		<script>
+			window.selectedCoordinates = null; 
+            let mapTempMarker = null;
+
 			document
 				.getElementById("add-spot-btn")
 				?.addEventListener("click", async () => {
@@ -319,6 +328,11 @@
 						alert("請輸入釣點名稱！");
 						return;
 					}
+
+					if (!window.selectedCoordinates) {
+                        alert("❌ 請先在下方地圖上點擊選取釣點的經緯度座標！");
+                        return;
+                    }
 
 					const btn = document.getElementById("add-spot-btn");
 					const originalText = btn.innerText;
@@ -337,6 +351,18 @@
 							);
 
 							if (matchedSpot) {
+								try {
+                                    await fetch("/api/spots/save", {
+                                        method: "POST",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({
+                                            spot_name: matchedSpot,
+                                            lat: window.selectedCoordinates.lat,
+                                            lng: window.selectedCoordinates.lng
+                                        })
+                                    });
+                                } catch (err) { console.error(err); }
+
 								alert(
 									`通知：系統發現您已經建立過「${matchedSpot}」，將為您整合紀錄並開啟相機。`,
 								);
@@ -360,6 +386,19 @@
 						const data = await response.json();
 
 						if (data.valid) {
+							btn.innerText = "正在儲存座標資料...";
+                            try {
+                                await fetch("/api/spots/save", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({
+                                        spot_name: spotName,
+                                        lat: window.selectedCoordinates.lat,
+                                        lng: window.selectedCoordinates.lng
+                                    }),
+                                });
+                            } catch (saveErr) { console.error(saveErr); }
+
 							localStorage.setItem(
 								"current_fishing_spot",
 								spotName,
@@ -380,5 +419,96 @@
 					}
 				});
 		</script>
+
+		<script>
+            document.addEventListener("DOMContentLoaded", () => {
+                const mapEl = document.getElementById("main-fishing-map");
+                if (!mapEl) return;
+
+                // 1. 初始化 Leaflet 地圖物件，預設視野對準全台大範圍
+                const fishingMap = L.map('main-fishing-map').setView([23.6978, 120.9605], 7);
+
+                // 2. 鋪上 OpenStreetMap 開源地圖層底圖
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(fishingMap);
+
+                // 3. 監聽地圖點擊：放置藍色小指針並紀錄座標給全域變數
+                fishingMap.on('click', function(e) {
+                    window.selectedCoordinates = e.latlng;
+                    if (mapTempMarker) {
+                        mapTempMarker.setLatLng(window.selectedCoordinates);
+                    } else {
+                        mapTempMarker = L.marker(window.selectedCoordinates).addTo(fishingMap);
+                    }
+                    mapTempMarker.bindPopup("<b>📍 已選取此座標點！</b><br>請在上方欄位填入名稱並按下加入釣點。").openPopup();
+                });
+
+                // 4. 初始化加載：自動從 Firebase 中下載所有存過座標的釣點，並改畫「！」紅圈圓形圖標
+                async function loadExclamationMarkers() {
+                    try {
+                        const res = await fetch('/api/spots/with_coords');
+                        const data = await res.json();
+
+                        if (data.status === "success" && data.spots) {
+                            // 定義用純 CSS 刻出來的圓形紅底白字「！」惊嘆號樣式
+                            const exclamationIcon = L.divIcon({
+                                className: 'custom-map-exclamation-icon',
+                                html: `<div style="background-color: #ef4444; color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); border: 2px solid white;">!</div>`,
+                                iconSize: [28, 28],
+                                iconAnchor: [14, 14],
+                                popupAnchor: [0, -14]
+                            });
+
+                            // 巡迴把每個釣點釘上去
+                            data.spots.forEach(spot => {
+                                if (!spot.lat || !spot.lng) return;
+
+                                const marker = L.marker([spot.lat, spot.lng], { icon: exclamationIcon }).addTo(fishingMap);
+                                
+                                // 點擊「！」標記時，即時動態串接 /api/spots/<spot_name>/images 獲取該點的所有已完成歷史相片
+                                marker.on('click', async () => {
+                                    marker.bindPopup(`<b>📍 ${spot.spot_name}</b><br><span style="color:#666;font-size:12px;">正在動態載入歷史漁獲照片...</span>`).openPopup();
+                                    
+                                    try {
+                                        const imgRes = await fetch(`/api/spots/${encodeURIComponent(spot.spot_name)}/images`);
+                                        const imgData = await imgRes.json();
+
+                                        let popupHtml = `<div style="max-width: 220px; padding: 2px; font-family: sans-serif;">
+                                            <h4 style="margin: 0 0 8px 0; color: #0077b6; font-size:14px; border-bottom: 1px solid #eee; padding-bottom: 4px;">📍 ${spot.spot_name}</h4>`;
+
+                                        if (imgData.status === "success" && imgData.images && imgData.images.length > 0) {
+                                            popupHtml += `<div style="max-height: 150px; overflow-y: auto; text-align: left;">`;
+                                            imgData.images.forEach(img => {
+                                                popupHtml += `
+                                                    <div style="display: inline-block; width: 90px; margin: 4px; border: 1px solid #e2e8f0; padding: 2px; border-radius: 4px; background: #fff; text-align:center; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                                                        <img src="${img.image_url}" style="width: 100%; height: 50px; object-fit: cover; border-radius: 2px;" alt="fish">
+                                                        <div style="font-size: 10px; font-weight: bold; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px;">
+                                                            ${img.fish_type || '未知魚種'}
+                                                        </div>
+                                                    </div>`;
+                                            });
+                                            popupHtml += `</div>`;
+                                        } else {
+                                            popupHtml += `<p style="margin: 0; font-size: 12px; color: #94a3b8; text-align:center; padding: 8px 0;">此釣點尚無成功的漁獲辨識照片。</p>`;
+                                        }
+
+                                        popupHtml += `</div>`;
+                                        marker.setPopupContent(popupHtml); // 抽換成漂亮的圖文框內容
+                                    } catch (err) {
+                                        console.error(err);
+                                        marker.setPopupContent(`<b>📍 ${spot.spot_name}</b><br><span style="color:red;font-size:12px;">圖片載入異常</span>`);
+                                    }
+                                });
+                            });
+                        }
+                    } catch (err) {
+                        console.error("地圖載入歷史標記失敗:", err);
+                    }
+                }
+                loadExclamationMarkers();
+            });
+        </script>
 	</body>
 </html>
