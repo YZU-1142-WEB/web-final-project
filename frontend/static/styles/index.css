@@ -50,9 +50,10 @@ body {
     border-radius: var(--border-radius-lg);
     box-sizing: border-box;
     width: 100%;
-    max-width: 775px; /* 收緊最大寬度，聚焦操作視野 */
+    max-width: 775px; 
     padding: 24px;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    scroll-margin-top: 80px;
 }
 
 .container:hover {
@@ -112,22 +113,33 @@ body {
 /* ==========================================
    2. 首頁頂部橫幅區塊
 ========================================== */
-#top-box {
-    padding: 0;
-    height: 180px; /* 修正原本過高佔畫面的問題 */
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+/* 1. 外層介紹區塊大框 */
+.intro-section {
+    background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+    padding: 40px;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 775px;       /*.container 一模一樣的數字 (如 700px 或 850px) */
+    box-sizing: border-box;
+
+    margin-bottom: 40px;
 }
 
-.top-content {
-    flex: 1;
-    background-image: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+/* 2. 主標題文字 */
+.intro-section h1 {
+    font-size: 28px;
+    color: #0f172a;
+    line-height: 1.4;
+    margin: 0 0 16px 0;
 }
 
+/* 3. 副標題內文 */
+.intro-section p {
+    font-size: 14px;
+    color: #334155;
+    line-height: 1.6;
+    margin: 0;
+}
 /* ==========================================
    3. 表單元件與控制群組
 ========================================== */
@@ -212,6 +224,9 @@ body {
 /* ==========================================
    4. 抽魚功能專屬優化
 ========================================== */
+.fish-container{
+    margin-top: 10 , 0 , 0 , 0px;
+}
 .fish-action-row {
     display: flex;
     align-items: center;
@@ -370,7 +385,7 @@ body {
 /* ==========================================
    8. RWD 手機版自適應彈性優化
 ========================================== */
-@media (max-width: 600px) {
+@media (max-width: 768px) {
     body {
         padding: 16px 12px;
         gap: 16px;
@@ -406,10 +421,14 @@ body {
         box-sizing: border-box;
     }
 	.sticky-nav {
+        position: sticky;
         top: 8px;           
+        right: auto;        
+        left: auto;         
+        margin: 10px auto;       
         padding: 6px 10px;
         gap: 2px;           
-        max-width: 95%;     
+        max-width: 100%;     
     }
     
     .nav-item {
