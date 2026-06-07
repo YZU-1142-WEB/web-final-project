@@ -1,34 +1,3 @@
-// frontend/static/javascript/index.js
-
-// ==========================================
-// 1. AI 辨識任務背景輪詢檢查
-// ==========================================
-function checkAiTaskStatus() {
-    const taskId = localStorage.getItem("fish_task_id");
-    if (!taskId) return;
-
-    console.log("偵測到背景辨識任務中，ID:", taskId);
-
-    const interval = setInterval(async () => {
-        try {
-            const response = await fetch(`/api/check_task/${taskId}`);
-            const data = await response.json();
-
-            if (data.status === "completed") {
-                console.log("辨識完成！準備跳轉...");
-                clearInterval(interval);
-                localStorage.removeItem("fish_task_id");
-                window.location.href = `/result/${taskId}`;
-            } else if (data.status === "not_found") {
-                clearInterval(interval);
-                localStorage.removeItem("fish_task_id");
-            }
-        } catch (error) {
-            console.error("輪詢時發生錯誤:", error);
-        }
-    }, 3000);
-}
-
 // ==========================================
 // 2. 全台縣市對應「所有測站名稱」資料庫
 // ==========================================
@@ -276,9 +245,6 @@ function bindAddSpotEvent() {
 // 5. DOM 載入完畢初始化
 // ==========================================
 document.addEventListener("DOMContentLoaded", () => {
-    // 執行 AI 背景任務檢查
-    checkAiTaskStatus();
-
     // 初始化渲染圖表
     const countySelect = document.getElementById("county-selector");
     renderAllCountyCharts();

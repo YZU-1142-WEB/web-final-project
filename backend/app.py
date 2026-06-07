@@ -662,22 +662,32 @@ def delete_picture(doc_id):
 
 @app.route('/api/spots/<spot_name>', methods=['DELETE'])
 def delete_spot(spot_name):
-    """刪除整個釣點（也就是刪除該釣點下的所有照片紀錄）"""
+    """刪除整個釣點（也就是刪除該釣點下的所有照片紀錄，並同步清理地圖座標）"""
     if 'username' not in session:
         return jsonify({"status": "error", "message": "請先登入"}), 401
 
     try:
+        # 1. 刪除該釣點下的所有漁獲照片紀錄 (你原本寫好的部分)
         records_ref = db.collection('fish_records')
-        query = records_ref.where('username', '==', session['username']).where(
-            'spot_name', '==', spot_name).stream()
+        query = records_ref.where('username', '==', session['username']).where('spot_name', '==', spot_name).stream()
 
         deleted_count = 0
         for doc in query:
             doc.reference.delete()
             deleted_count += 1
 
-        return jsonify({"status": "success", "message": f"已刪除釣點及 {deleted_count} 張照片"})
+        # 2. 💡【新加入的部分】同步刪除 fishing_spots 集合裡該釣點的經緯度座標紀錄
+        spots_ref = db.collection('fishing_spots')
+        spots_query = spots_ref.where('username', '==', session['username']).where('spot_name', '==', spot_name).stream()
+        
+        for doc in spots_query:
+            doc.reference.delete()
+            print(f"🗑️ 已成功同步清除地圖座標紀錄: {spot_name}")
+
+        return jsonify({"status": "success", "message": f"已成功刪除釣點、座標及 {deleted_count} 張照片"})
+        
     except Exception as e:
+        traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
