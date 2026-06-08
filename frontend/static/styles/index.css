@@ -32,6 +32,12 @@ body {
     color: var(--text-main);
     min-height: 100vh;
     box-sizing: border-box;
+
+    background-image: url('../images/Homepage-background.jpeg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed; 
 }
 
 #time-display {
@@ -125,7 +131,6 @@ body {
     margin-bottom: 40px;
 }
 
-/* 2. 主標題文字 */
 .intro-section h1 {
     font-size: 28px;
     color: #0f172a;
@@ -133,9 +138,8 @@ body {
     margin: 0 0 16px 0;
 }
 
-/* 3. 副標題內文 */
 .intro-section p {
-    font-size: 14px;
+    font-size: 16px;
     color: #334155;
     line-height: 1.6;
     margin: 0;
@@ -186,7 +190,6 @@ body {
     transition: transform 0.3s ease; /* 保留你設定的動畫過渡時間 */
 }
 
-/* 圖片按鈕專屬的 Hover 效果（滑鼠移過去稍微放大就好，不需要變色） */
 #require-LLM-button:hover {
     transform: scale(1.1); 
     background-color: transparent; 
@@ -196,7 +199,7 @@ body {
     height: 40px; 
     width: auto;
     display: block;
-    filter: none; /* 移除我剛剛加的反白濾鏡，保持你原本的圖案顏色 */
+    filter: none; 
 }
 
 /* 一般功能按鈕 */
@@ -268,7 +271,7 @@ body {
     text-decoration: none;
     height: 46px;
     padding: 0 32px;
-    border-radius: 23px; /* 膠囊形狀保有特殊動線導向 */
+    border-radius: 23px; 
     font-weight: 600;
     font-size: 15px;
     box-shadow: 0 4px 12px rgba(247, 127, 0, 0.2);
