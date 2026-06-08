@@ -13,33 +13,27 @@
 	<body>
 		<div id="time-display"></div>
 
-		<div class="container section-card">
-			<h3 class="section-title">🤖 AI 智慧諮詢</h3>
-			<div class="input-group">
-				<input
-					id="middle-input"
-					type="text"
-					placeholder="輸入問題詢問 AI..."
-				/>
-				<button id="require-LLM-button">
-					<canvas
-						id="llm-button-icon"
-						width="273"
-						height="269"
-					></canvas>
-				</button>
-			</div>
-		</div>
+		<div class="container intro-section" >
+            <h1>探索釣魚的樂趣，<br>紀錄每一次收線的感動。</h1>
+            <p>歡迎來到我們的網頁。在這裡，你可以一鍵查詢全台即時潮汐、利用 AI 快速探索魚種，並將你的個人私房釣點數位化，輕鬆記錄你的充實釣魚生活！</p>
+        </div>
+
+        <nav class="sticky-nav">
+			<a href="#fish-container" class="nav-item">捕捉魚種</a>
+			<a href="#section-spot" class="nav-item">釣點管理</a>
+			<a href="#section-tide" class="nav-item">區域潮汐</a>
+			<a href="#section-ai" class="nav-item">AI 諮詢</a>
+		</nav>
 
 		<div id="fish-container" class="container section-card">
-			<h3 class="section-title">🎣 魚種快速探索</h3>
+			<h3 class="section-title">🎣 今日捕捉魚種</h3>
 			<div class="fish-action-row">
 				<div id="display-area">準備抽魚...</div>
-				<button id="random-button">開抽</button>
+				<button id="random-button">捕捉!</button>
 			</div>
 		</div>
 
-		<div class="container section-card">
+		<div id="section-spot" class="container section-card">
 			<h3 class="section-title">📍 釣點紀錄管理</h3>
 			<p style="font-size: 13px; color: #64748b; margin: -8px 0 12px 0;">
     			💡 提示：請先在下方地圖點擊選取「經緯度座標」，再輸入名稱加入釣點。
@@ -58,7 +52,7 @@
 			</div>
 		</div>
 
-		<div class="container section-card">
+		<div id="section-tide" class="container section-card">
 			<h3 class="section-title">🌊 區域潮汐預報</h3>
 			<div class="county-select-wrapper">
 				<label for="county-selector">選擇縣市：</label>
@@ -97,6 +91,24 @@
 			<div id="all-charts-wrapper" class="charts-scroll-container"></div>
 		</div>
 
+        <div id="section-ai" class="container section-card">
+			<h3 class="section-title">🤖 AI 智慧諮詢</h3>
+			<div class="input-group">
+				<input
+					id="middle-input"
+					type="text"
+					placeholder="輸入問題詢問 AI..."
+				/>
+				<button id="require-LLM-button">
+					<canvas
+						id="llm-button-icon"
+						width="273"
+						height="269"
+					></canvas>
+				</button>
+			</div>
+		</div>
+
 		<div class="container logout-container">
 			<a href="{{ url_for('logout') }}" class="logout-link">安全登出</a>
 		</div>
@@ -105,8 +117,8 @@
 		<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 		<script src="{{ url_for('static', filename='javascript/random.js') }}"></script>
 		<script src="{{ url_for('static', filename='javascript/script.js') }}"></script>
-		<script src="{{ url_for('static', filename='date.js') }}"></script>
-		<script src="{{ url_for('static', filename='llmrequest.js') }}"></script>
+		<script src="{{ url_for('static', filename='javascript/date.js') }}"></script>
+		<script src="{{ url_for('static', filename='javascript/llmrequest.js') }}"></script>
 		<script
 			src="https://cdn.plot.ly/plotly-2.24.1.min.js"
 			charset="utf-8"
