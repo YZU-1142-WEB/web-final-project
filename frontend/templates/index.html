@@ -1,355 +1,518 @@
 <!doctype html>
 <html lang="zh-Hant">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>魚類辨識首頁</title>
-        <link
-            rel="stylesheet"
-            href="{{ url_for('static', filename='styles/index.css') }}"
-        />
-    </head>
-    <body>
-        <div id="time-display"></div>
-        
-        <div class="intro-section">
-            <h1>探索釣魚的樂趣，<br>紀錄每一次收線的感動。</h1>
-            <p>歡迎來到我們的網頁。在這裡，你可以一鍵查詢全台即時潮汐、利用 AI 快速探索魚種，並將你的個人私房釣點數位化，輕鬆記錄你的充實釣魚生活！</p>
-        </div>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>魚類辨識首頁</title>
+		<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+		<link
+			rel="stylesheet"
+			href="{{ url_for('static', filename='styles/index.css') }}"
+		/>
+	</head>
+	<body>
+		<div id="time-display"></div>
 
-		<nav class="sticky-nav">
-			<a href="#fish-container" class="nav-item">快速抽魚</a>
-			<a href="#section-spot" class="nav-item">釣點管理</a>
-			<a href="#section-tide" class="nav-item">區域潮汐</a>
-			<a href="#section-ai" class="nav-item">AI 諮詢</a>
-		</nav>
+		<div class="container section-card">
+			<h3 class="section-title">🤖 AI 智慧諮詢</h3>
+			<div class="input-group">
+				<input
+					id="middle-input"
+					type="text"
+					placeholder="輸入問題詢問 AI..."
+				/>
+				<button id="require-LLM-button">
+					<canvas
+						id="llm-button-icon"
+						width="273"
+						height="269"
+					></canvas>
+				</button>
+			</div>
+		</div>
 
+		<div id="fish-container" class="container section-card">
+			<h3 class="section-title">🎣 魚種快速探索</h3>
+			<div class="fish-action-row">
+				<div id="display-area">準備抽魚...</div>
+				<button id="random-button">開抽</button>
+			</div>
+		</div>
 
-        <div id="fish-container" class="container section-card">
-            <h3 class="section-title">🎣 魚種快速探索</h3>
-            <div class="fish-action-row">
-                <div id="display-area">準備抽魚...</div>
-                <button id="random-button">開抽</button>
-            </div>
-        </div>
+		<div class="container section-card">
+			<h3 class="section-title">📍 釣點紀錄管理</h3>
+			<p style="font-size: 13px; color: #64748b; margin: -8px 0 12px 0;">
+    			💡 提示：請先在下方地圖點擊選取「經緯度座標」，再輸入名稱加入釣點。
+			</p>
+			<div class="input-group">
+				<input
+					id="spot-input"
+					type="text"
+					placeholder="輸入新增的釣點名稱 (例如: 野柳)"
+				/>
+				<button id="add-spot-btn">加入釣點</button>
+			</div>
+			<div id="main-fishing-map" style="height: 350px; width: 100%; border-radius: 12px; margin-top: 16px; border: 1.5px solid #e2e8f0; z-index: 1;"></div>
+			<div class="gallery-action-wrapper">
+				<a href="/my_spots" class="gallery-link">📍 顯示我的釣點圖庫</a>
+			</div>
+		</div>
 
-        <div id="section-spot" class="container section-card">
-            <h3 class="section-title">📍 釣點紀錄管理</h3>
-            <div class="input-group">
-                <input
-                    id="spot-input"
-                    type="text"
-                    placeholder="輸入新增的釣點名稱 (例如: 野柳)"
-                />
-                <button id="add-spot-btn">加入釣點</button>
-            </div>
-            <div class="gallery-action-wrapper">
-                <a href="/my_spots" class="gallery-link">📍 顯示我的釣點圖庫</a>
-            </div>
-        </div>
+		<div class="container section-card">
+			<h3 class="section-title">🌊 區域潮汐預報</h3>
+			<div class="county-select-wrapper">
+				<label for="county-selector">選擇縣市：</label>
+				<select id="county-selector">
+					<optgroup label="北部">
+						<option value="基隆市">基隆市</option>
+						<option value="新北市" selected>新北市</option>
+						<option value="桃園市">桃園市</option>
+						<option value="新竹">新竹縣市</option>
+					</optgroup>
+					<optgroup label="中部">
+						<option value="苗栗縣">苗栗縣</option>
+						<option value="臺中市">臺中市</option>
+						<option value="彰化縣">彰化縣</option>
+						<option value="雲林縣">雲林縣</option>
+					</optgroup>
+					<optgroup label="南部">
+						<option value="嘉義縣">嘉義縣</option>
+						<option value="臺南市">臺南市</option>
+						<option value="高雄市">高雄市</option>
+						<option value="屏東縣">屏東縣</option>
+					</optgroup>
+					<optgroup label="東部">
+						<option value="宜蘭縣">宜蘭縣</option>
+						<option value="花蓮縣">花蓮縣</option>
+						<option value="臺東縣">臺東縣</option>
+					</optgroup>
+					<optgroup label="外島">
+						<option value="澎湖縣">澎湖縣</option>
+						<option value="金門縣">金門縣</option>
+						<option value="連江縣">連江縣 (馬祖)</option>
+					</optgroup>
+				</select>
+			</div>
 
-        <div id="section-tide" class="container section-card">
-            <h3 class="section-title">🌊 區域潮汐預報</h3>
-            <div class="county-select-wrapper">
-                <label for="county-selector">選擇縣市：</label>
-                <select id="county-selector">
-                    <optgroup label="北部">
-                        <option value="基隆市">基隆市</option>
-                        <option value="新北市" selected>新北市</option>
-                        <option value="桃園市">桃園市</option>
-                        <option value="新竹">新竹縣市</option>
-                    </optgroup>
-                    <optgroup label="中部">
-                        <option value="苗栗縣">苗栗縣</option>
-                        <option value="臺中市">臺中市</option>
-                        <option value="彰化縣">彰化縣</option>
-                        <option value="雲林縣">雲林縣</option>
-                    </optgroup>
-                    <optgroup label="南部">
-                        <option value="嘉義縣">嘉義縣</option>
-                        <option value="臺南市">臺南市</option>
-                        <option value="高雄市">高雄市</option>
-                        <option value="屏東縣">屏東縣</option>
-                    </optgroup>
-                    <optgroup label="東部">
-                        <option value="宜蘭縣">宜蘭縣</option>
-                        <option value="花蓮縣">花蓮縣</option>
-                        <option value="臺東縣">臺東縣</option>
-                    </optgroup>
-                    <optgroup label="外島">
-                        <option value="澎湖縣">澎湖縣</option>
-                        <option value="金門縣">金門縣</option>
-                        <option value="連江縣">連江縣 (馬祖)</option>
-                    </optgroup>
-                </select>
-            </div>
-            
-            <div id="all-charts-wrapper" class="charts-scroll-container"></div>
-        </div>
+			<div id="all-charts-wrapper" class="charts-scroll-container"></div>
+		</div>
 
-		<div id="section-ai" class="container section-card">
-            <h3 class="section-title">🤖 AI 智慧諮詢</h3>
-            <div class="input-group">
-                <input
-                    id="middle-input"
-                    type="text"
-                    placeholder="輸入問題詢問 AI..."
-                />
-                <button id="require-LLM-button">
-                    <canvas id="llm-button-icon" width="273" height="269"></canvas>
-                </button>   
-            </div>
-        </div>
+		<div class="container logout-container">
+			<a href="{{ url_for('logout') }}" class="logout-link">安全登出</a>
+		</div>
 
-        <div class="container logout-container">
-            <a href="{{ url_for('logout') }}" class="logout-link">安全登出</a>
-        </div>
+		<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+		<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+		<script src="{{ url_for('static', filename='javascript/random.js') }}"></script>
+		<script src="{{ url_for('static', filename='javascript/script.js') }}"></script>
+		<script src="{{ url_for('static', filename='date.js') }}"></script>
+		<script src="{{ url_for('static', filename='llmrequest.js') }}"></script>
+		<script
+			src="https://cdn.plot.ly/plotly-2.24.1.min.js"
+			charset="utf-8"
+		></script>
 
-        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-        <script src="{{ url_for('static', filename='javascript/random.js') }}"></script>
-        <script src="{{ url_for('static', filename='javascript/script.js') }}"></script>
-        <script src="{{ url_for('static', filename='javascript/date.js') }}"></script>
-        <script src="{{ url_for('static', filename='javascript/llmrequest.js') }}"></script>
-        <script src="https://cdn.plot.ly/plotly-2.24.1.min.js" charset="utf-8"></script>
-
-        <script>
-            function checkAiTaskStatus() {
+		<script>
+            function homePageCheckAiTask() {
                 const taskId = localStorage.getItem("fish_task_id");
                 if (!taskId) return;
-                console.log("偵測到背景辨識任務中，ID:", taskId);
-                const interval = setInterval(async () => {
+                
+                // 💡 在主控台打印，方便你 F12 追蹤
+                console.log("🎯 [主頁監聽] 偵測到背景辨識任務進行中，ID:", taskId);
+                
+                // 建立一個完全獨立的主頁定時器，避免被外部檔案干擾
+                const homeInterval = setInterval(async () => {
                     try {
-                        const response = await fetch(`/api/check_task/${taskId}`);
+                        // 💡 精確對齊後端 app.py 的新路由：/api/picture/check_task/<task_id>
+                        const response = await fetch(`/api/picture/check_task/${taskId}`);
                         const data = await response.json();
+                        
+                        console.log("📊 [主頁監聽] 目前 AI 辨識狀態:", data.status);
+                        
                         if (data.status === "completed") {
-                            console.log("辨識完成！準備跳轉...");
-                            clearInterval(interval);
-                            localStorage.removeItem("fish_task_id");
-                            window.location.href = `/result/${taskId}`;
-                        } else if (data.status === "not_found") {
-                            clearInterval(interval);
+                            console.log("🎉 [主頁監聽] 辨識完成！立刻執行重新導向...");
+                            
+                            clearInterval(homeInterval); // 清除主頁定時器
+                            localStorage.removeItem("fish_task_id"); // 拔掉任務 ID 防止無限跳轉
+                            
+                            // 💡 精確對齊後端 app.py 的結果路由：/api/picture/result/<task_id>
+                            window.location.href = `/api/picture/result/${taskId}`;
+                        } else if (data.status === "not_found" || data.status === "failed") {
+                            console.log("❌ [主頁監聽] 任務失敗或已被刪除，停止輪詢");
+                            clearInterval(homeInterval);
                             localStorage.removeItem("fish_task_id");
                         }
                     } catch (error) {
-                        console.error("輪詢時發生錯誤:", error);
+                        console.error("⚠️ [主頁監聽] 輪詢時發生異常錯誤:", error);
                     }
                 }, 3000);
             }
-            document.addEventListener("DOMContentLoaded", checkAiTaskStatus);
+            
+            // 確保網頁 DOM 樹載入完畢後，精確執行主頁專屬檢查
+            document.addEventListener("DOMContentLoaded", homePageCheckAiTask);
         </script>
+		
+		<script>
+			const stationMapping = {
+				基隆市: [
+					{ name: "基隆港/和平島", val: "基隆市中正區" },
+					{ name: "外木山", val: "基隆市中山區" },
+				],
+				新北市: [
+					{ name: "淡水", val: "新北市淡水區" },
+					{ name: "富貴角 (石門)", val: "新北市石門區" },
+					{ name: "野柳/萬里", val: "新北市萬里區" },
+					{ name: "鼻頭角 (瑞芳)", val: "新北市瑞芳區" },
+					{ name: "龍洞/澳底 (貢寮)", val: "新北市貢寮區" },
+				],
+				桃園市: [
+					{ name: "竹圍 (大園)", val: "桃園市大園區" },
+					{ name: "永安 (新屋)", val: "桃園市新屋區" },
+				],
+				新竹: [
+					{ name: "新竹漁港", val: "新竹市北區" },
+					{ name: "坡頭 (新豐)", val: "新竹縣新豐鄉" },
+				],
+				苗栗縣: [
+					{ name: "龍鳳 (竹南)", val: "苗栗縣竹南鎮" },
+					{ name: "外埔 (後龍)", val: "苗栗縣後龍鎮" },
+					{ name: "苑裡", val: "苗栗縣苑裡鎮" },
+				],
+				臺中市: [
+					{ name: "臺中港/梧棲", val: "臺中市梧棲區" },
+					{ name: "大甲", val: "臺中市大甲區" },
+				],
+				彰化縣: [
+					{ name: "鹿港", val: "彰化縣鹿港鎮" },
+					{ name: "王功 (芳苑)", val: "彰化縣芳苑鄉" },
+				],
+				雲林縣: [
+					{ name: "麥寮", val: "雲林縣麥寮鄉" },
+					{ name: "箔子寮 (四湖)", val: "雲林縣四湖鄉" },
+				],
+				嘉義縣: [
+					{ name: "東石", val: "嘉義縣東石鄉" },
+					{ name: "布袋", val: "嘉義縣布袋鎮" },
+				],
+				臺南市: [
+					{ name: "將軍", val: "臺南市將軍區" },
+					{ name: "安平", val: "臺南市安平區" },
+				],
+				高雄市: [
+					{ name: "興達 (茄萣)", val: "高雄市茄萣區" },
+					{ name: "彌陀", val: "高雄市彌陀區" },
+					{ name: "旗津", val: "高雄市旗津區" },
+				],
+				屏東縣: [
+					{ name: "東港", val: "屏東縣東港鎮" },
+					{ name: "小琉球", val: "屏東縣琉球鄉" },
+					{ name: "後壁湖 (恆春)", val: "屏東縣恆春鎮" },
+				],
+				宜蘭縣: [
+					{ name: "烏石/大溪 (頭城)", val: "宜蘭縣頭城鎮" },
+					{ name: "蘇澳", val: "宜蘭縣蘇澳鎮" },
+				],
+				花蓮縣: [
+					{ name: "花蓮港", val: "花蓮縣花蓮市" },
+					{ name: "石梯坪 (豐濱)", val: "花蓮縣豐濱鄉" },
+				],
+				臺東縣: [
+					{ name: "成功", val: "臺東縣成功鎮" },
+					{ name: "富岡 (臺東市)", val: "臺東縣臺東市" },
+					{ name: "綠島", val: "臺東縣綠島鄉" },
+					{ name: "蘭嶼", val: "臺東縣蘭嶼鄉" },
+				],
+				澎湖縣: [
+					{ name: "馬公", val: "澎湖縣馬公市" },
+					{ name: "吉貝 (白沙)", val: "澎湖縣白沙鄉" },
+					{ name: "七美", val: "澎湖縣七美鄉" },
+				],
+				金門縣: [{ name: "金門 (金城)", val: "金門縣金城鎮" }],
+				連江縣: [
+					{ name: "南竿 (馬祖)", val: "連江縣南竿鄉" },
+					{ name: "東引", val: "連江縣東引鄉" },
+				],
+			};
 
-        <script>
-            const stationMapping = {
-                基隆市: [
-                    { name: "基隆港/和平島", val: "基隆市中正區" },
-                    { name: "外木山", val: "基隆市中山區" },
-                ],
-                新北市: [
-                    { name: "淡水", val: "新北市淡水區" },
-                    { name: "富貴角 (石門)", val: "新北市石門區" },
-                    { name: "野柳/萬里", val: "新北市萬里區" },
-                    { name: "鼻頭角 (瑞芳)", val: "新北市瑞芳區" },
-                    { name: "龍洞/澳底 (貢寮)", val: "新北市貢寮區" },
-                ],
-                桃園市: [
-                    { name: "竹圍 (大園)", val: "桃園市大園區" },
-                    { name: "永安 (新屋)", val: "桃園市新屋區" },
-                ],
-                新竹: [
-                    { name: "新竹漁港", val: "新竹市北區" },
-                    { name: "坡頭 (新豐)", val: "新竹縣新豐鄉" },
-                ],
-                苗栗縣: [
-                    { name: "龍鳳 (竹南)", val: "苗栗縣竹南鎮" },
-                    { name: "外埔 (後龍)", val: "苗栗縣後龍鎮" },
-                    { name: "苑裡", val: "苗栗縣苑裡鎮" },
-                ],
-                臺中市: [
-                    { name: "臺中港/梧棲", val: "臺中市梧棲區" },
-                    { name: "大甲", val: "臺中市大甲區" },
-                ],
-                彰化縣: [
-                    { name: "鹿港", val: "彰化縣鹿港鎮" },
-                    { name: "王功 (芳苑)", val: "彰化縣芳苑鄉" },
-                ],
-                雲林縣: [
-                    { name: "麥寮", val: "雲林縣麥寮鄉" },
-                    { name: "箔子寮 (四湖)", val: "雲林縣四湖鄉" },
-                ],
-                嘉義縣: [
-                    { name: "東石", val: "嘉義縣東石鄉" },
-                    { name: "布袋", val: "嘉義縣布袋鎮" },
-                ],
-                臺南市: [
-                    { name: "將軍", val: "臺南市將軍區" },
-                    { name: "安平", val: "臺南市安平區" },
-                ],
-                高雄市: [
-                    { name: "興達 (茄萣)", val: "高雄市茄萣區" },
-                    { name: "彌陀", val: "高雄市彌陀區" },
-                    { name: "旗津", val: "高雄市旗津區" },
-                ],
-                屏東縣: [
-                    { name: "東港", val: "屏東縣東港鎮" },
-                    { name: "小琉球", val: "屏東縣琉球鄉" },
-                    { name: "後壁湖 (恆春)", val: "屏東縣恆春鎮" },
-                ],
-                宜蘭縣: [
-                    { name: "烏石/大溪 (頭城)", val: "宜蘭縣頭城鎮" },
-                    { name: "蘇澳", val: "宜蘭縣蘇澳鎮" },
-                ],
-                花蓮縣: [
-                    { name: "花蓮港", val: "花蓮縣花蓮市" },
-                    { name: "石梯坪 (豐濱)", val: "花蓮縣豐濱鄉" },
-                ],
-                臺東縣: [
-                    { name: "成功", val: "臺東縣成功鎮" },
-                    { name: "富岡 (臺東市)", val: "臺東縣臺東市" },
-                    { name: "綠島", val: "臺東縣綠島鄉" },
-                    { name: "蘭嶼", val: "臺東縣蘭嶼鄉" },
-                ],
-                澎湖縣: [
-                    { name: "馬公", val: "澎湖縣馬公市" },
-                    { name: "吉貝 (白沙)", val: "澎湖縣白沙鄉" },
-                    { name: "七美", val: "澎湖縣七美鄉" },
-                ],
-                金門縣: [{ name: "金門 (金城)", val: "金門縣金城鎮" }],
-                連江縣: [
-                    { name: "南竿 (馬祖)", val: "連江縣南竿鄉" },
-                    { name: "東引", val: "連江縣東引鄉" },
-                ],
-            };
+			async function renderAllCountyCharts() {
+				const selectedCounty =
+					document.getElementById("county-selector").value;
+				const stations = stationMapping[selectedCounty];
+				const wrapper = document.getElementById("all-charts-wrapper");
+				wrapper.innerHTML = "";
 
-            async function renderAllCountyCharts() {
-                const selectedCounty = document.getElementById("county-selector").value;
-                const stations = stationMapping[selectedCounty];
-                const wrapper = document.getElementById("all-charts-wrapper");
-                wrapper.innerHTML = "";
+				for (let i = 0; i < stations.length; i++) {
+					const stationObj = stations[i];
+					const displayName = stationObj.name;
+					const queryValue = stationObj.val;
+					const chartId = `tidal-chart-${i}`;
 
-                for (let i = 0; i < stations.length; i++) {
-                    const stationObj = stations[i];
-                    const displayName = stationObj.name;
-                    const queryValue = stationObj.val;
-                    const chartId = `tidal-chart-${i}`;
+					const chartDiv = document.createElement("div");
+					chartDiv.id = chartId;
+					chartDiv.className = "chart-card";
+					chartDiv.style.marginBottom = "25px";
+					chartDiv.style.minHeight = "350px";
+					wrapper.appendChild(chartDiv);
 
-                    const chartDiv = document.createElement("div");
-                    chartDiv.id = chartId;
-                    chartDiv.className = "chart-card";
-                    chartDiv.style.marginBottom = "25px";
-                    chartDiv.style.minHeight = "350px";
-                    wrapper.appendChild(chartDiv);
+					try {
+						const response = await fetch(
+							`/api/get_tidal_data?station=${queryValue}`,
+						);
+						const data = await response.json();
+
+						if (!data.success) {
+							chartDiv.innerHTML = `<p style="color:#ff6b6b; text-align:center; padding-top:150px;">❌ 無法取得 ${displayName} 的潮汐資料: ${data.message}</p>`;
+							continue;
+						}
+
+						const trace = {
+							x: data.times,
+							y: data.heights,
+							mode: "lines+markers",
+							name: "預報潮高",
+							line: {
+								shape: "spline",
+								color: "#0077b6",
+								width: 3,
+							},
+							marker: { size: 6, color: "#023e8a" },
+							fill: "tozeroy",
+							fillcolor: "rgba(0, 119, 182, 0.1)",
+							type: "scatter",
+						};
+
+						const layout = {
+							title: {
+								text: `🌊 ${displayName} 潮汐預報曲線`,
+								font: {
+									color: "#2b2d42",
+									size: 18,
+									family: "Arial, sans-serif",
+								},
+							},
+							paper_bgcolor: "#ffffff",
+							plot_bgcolor: "#ffffff",
+							font: { color: "#555" },
+							margin: { l: 50, r: 20, t: 50, b: 60 },
+							xaxis: {
+								title: "時間",
+								gridcolor: "#e0e6ed",
+								tickangle: 30,
+							},
+							yaxis: { title: "潮高 (cm)", gridcolor: "#e0e6ed" },
+						};
+
+						const config = {
+							responsive: true,
+							displayModeBar: false,
+						};
+						Plotly.newPlot(chartId, [trace], layout, config);
+					} catch (error) {
+						console.error(`${displayName} 圖表載入失敗:`, error);
+						chartDiv.innerHTML = `<p style="color:#ff6b6b; text-align:center; padding-top:150px;">${displayName} 載入失敗</p>`;
+					}
+				}
+			}
+
+			document.addEventListener("DOMContentLoaded", () => {
+				const countySelect = document.getElementById("county-selector");
+				renderAllCountyCharts();
+				if (countySelect) {
+					countySelect.addEventListener(
+						"change",
+						renderAllCountyCharts,
+					);
+				}
+			});
+		</script>
+
+		<script>
+            window.selectedCoordinates = null; 
+            window.mapTempMarker = null; // 提升為 window 全域變數，方便跨區塊控制
+
+            document
+                .getElementById("add-spot-btn")
+                ?.addEventListener("click", async () => {
+                    const spotName = document
+                        .getElementById("spot-input")
+                        .value.trim();
+                    if (!spotName) {
+                        alert("請輸入釣點名稱！");
+                        return;
+                    }
+
+                    if (!window.selectedCoordinates) {
+                        alert("❌ 請先在下方地圖上點擊選取釣點的經緯度座標！");
+                        return;
+                    }
+
+                    const btn = document.getElementById("add-spot-btn");
+                    const originalText = btn.innerText;
+                    btn.disabled = true;
 
                     try {
-                        const response = await fetch(`/api/get_tidal_data?station=${queryValue}`);
-                        const data = await response.json();
+                        btn.innerText = "檢查釣點紀錄中...";
+                        const spotsResponse = await fetch("/api/my_spots");
+                        const spotsData = await spotsResponse.json();
 
-                        if (!data.success) {
-                            chartDiv.innerHTML = `<p style="color:#ff6b6b; text-align:center; padding-top:150px;">❌ 無法取得 ${displayName} 的潮汐資料: ${data.message}</p>`;
-                            continue;
+                        if (spotsData.status === "success") {
+                            const matchedSpot = spotsData.spots.find(
+                                (spot) =>
+                                    spot.includes(spotName) ||
+                                    spotName.includes(spot),
+                            );
+
+                            if (matchedSpot) {
+                                try {
+                                    await fetch("/api/spots/save", {
+                                        method: "POST",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({
+                                            spot_name: matchedSpot,
+                                            lat: window.selectedCoordinates.lat,
+                                            lng: window.selectedCoordinates.lng
+                                        })
+                                    });
+                                } catch (err) { console.error(err); }
+
+                                alert(`通知：系統發現您已經建立過「${matchedSpot}」，將為您整合紀錄並開啟相機。`);
+                                localStorage.setItem("current_fishing_spot", matchedSpot);
+                                window.location.href = "{{ url_for('camera_page') }}";
+                                return;
+                            }
                         }
 
-                        const trace = {
-                            x: data.times,
-                            y: data.heights,
-                            mode: "lines+markers",
-                            name: "預報潮高",
-                            line: {
-                                shape: "spline",
-                                color: "#0077b6",
-                                width: 3,
-                            },
-                            marker: { size: 6, color: "#023e8a" },
-                            fill: "tozeroy",
-                            fillcolor: "rgba(0, 119, 182, 0.1)",
-                            type: "scatter",
-                        };
+                        btn.innerText = "AI 驗證釣點中...";
+                        const response = await fetch("/api/llm/validate_spot", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ spot_name: spotName }),
+                        });
+                        const data = await response.json();
 
-                        const layout = {
-                            title: {
-                                text: `🌊 ${displayName} 潮汐預報曲線`,
-                                font: { color: "#2b2d42", size: 18, family: "Arial, sans-serif" },
-                            },
-                            paper_bgcolor: "#ffffff",
-                            plot_bgcolor: "#ffffff",
-                            font: { color: "#555" },
-                            margin: { l: 50, r: 20, t: 50, b: 60 },
-                            xaxis: { title: "時間", gridcolor: "#e0e6ed", tickangle: 30 },
-                            yaxis: { title: "潮高 (cm)", gridcolor: "#e0e6ed" },
-                        };
+                        if (data.valid) {
+                            btn.innerText = "正在儲存座標資料...";
+                            try {
+                                await fetch("/api/spots/save", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({
+                                        spot_name: spotName,
+                                        lat: window.selectedCoordinates.lat,
+                                        lng: window.selectedCoordinates.lng
+                                    }),
+                                });
+                            } catch (saveErr) { console.error(saveErr); }
 
-                        const config = { responsive: true, displayModeBar: false };
-                        Plotly.newPlot(chartId, [trace], layout, config);
+                            localStorage.setItem("current_fishing_spot", spotName);
+                            window.location.href = "{{ url_for('camera_page') }}";
+                        } else {
+                            alert(data.message || "請輸入正確釣點名稱");
+                        }
                     } catch (error) {
-                        console.error(`${displayName} 圖表載入失敗:`, error);
-                        chartDiv.innerHTML = `<p style="color:#ff6b6b; text-align:center; padding-top:150px;">${displayName} 載入失敗</p>`;
+                        console.error("驗證發生錯誤:", error);
+                        alert("連線發生錯誤，請稍後再試！");
+                    } finally {
+                        if (btn) {
+                            btn.innerText = originalText;
+                            btn.disabled = false;
+                        }
                     }
-                }
-            }
-
-            document.addEventListener("DOMContentLoaded", () => {
-                const countySelect = document.getElementById("county-selector");
-                renderAllCountyCharts();
-                if (countySelect) {
-                    countySelect.addEventListener("change", renderAllCountyCharts);
-                }
-            });
+                });
         </script>
 
         <script>
-            document.getElementById("add-spot-btn")?.addEventListener("click", async () => {
-                const spotName = document.getElementById("spot-input").value.trim();
-                if (!spotName) {
-                    alert("請輸入釣點名稱！");
-                    return;
-                }
+            document.addEventListener("DOMContentLoaded", () => {
+                const mapEl = document.getElementById("main-fishing-map");
+                if (!mapEl) return;
 
-                const btn = document.getElementById("add-spot-btn");
-                const originalText = btn.innerText;
-                btn.disabled = true;
+                const fishingMap = L.map('main-fishing-map').setView([23.6978, 120.9605], 7);
 
-                try {
-                    btn.innerText = "檢查釣點紀錄中...";
-                    const spotsResponse = await fetch("/api/my_spots");
-                    const spotsData = await spotsResponse.json();
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19, attribution: '© OpenStreetMap contributors'
+                }).addTo(fishingMap);
 
-                    if (spotsData.status === "success") {
-                        const matchedSpot = spotsData.spots.find(
-                            (spot) => spot.includes(spotName) || spotName.includes(spot),
-                        );
-
-                        if (matchedSpot) {
-                            alert(`通知：系統發現您已經建立過「${matchedSpot}」，將為您整合紀錄並開啟相機。`);
-                            localStorage.setItem("current_fishing_spot", matchedSpot);
-                            window.location.href = "{{ url_for('camera_page') }}";
-                            return;
-                        }
-                    }
-
-                    btn.innerText = "AI 驗證釣點中...";
-                    const response = await fetch("/api/llm/validate_spot", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ spot_name: spotName }),
-                    });
-
-                    const data = await response.json();
-
-                    if (data.valid) {
-                        localStorage.setItem("current_fishing_spot", spotName);
-                        window.location.href = "{{ url_for('camera_page') }}";
+                // 💡 修正點：點擊地圖時的藍針控制與「點擊空白處自動清除機制」
+                fishingMap.on('click', function(e) {
+                    window.selectedCoordinates = e.latlng;
+                    
+                    if (window.mapTempMarker && fishingMap.hasLayer(window.mapTempMarker)) {
+                        // 如果藍針已在畫面上，直接平移座標並打開彈窗
+                        window.mapTempMarker.setLatLng(window.selectedCoordinates);
+                        window.mapTempMarker.openPopup();
                     } else {
-                        alert(data.message || "請輸入正確釣點名稱");
+                        // 首次建立藍針
+                        window.mapTempMarker = L.marker(window.selectedCoordinates).addTo(fishingMap);
+                        window.mapTempMarker.bindPopup("<b>📍 已選取此座標點！</b><br>請在上方欄位填入名稱並按下加入釣點。").openPopup();
+                        
+                        // 監聽藍針的彈窗關閉事件
+                        window.mapTempMarker.on('popupclose', function() {
+                            setTimeout(() => {
+                                // 100ms 後檢查：如果此時藍針的彈窗依然是關閉狀態（代表是點空白處或點 X 關閉，而不是因為更換位置點擊地圖）
+                                if (window.mapTempMarker && !window.mapTempMarker.isPopupOpen()) {
+                                    fishingMap.removeLayer(window.mapTempMarker);
+                                    window.mapTempMarker = null;
+                                    window.selectedCoordinates = null; // 清空全域變數
+                                    console.log("🔄 臨時選取的座標已清除");
+                                }
+                            }, 100);
+                        });
                     }
-                } catch (error) {
-                    console.error("驗證發生錯誤:", error);
-                    alert("連線發生錯誤，請稍後再試！");
-                } finally {
-                    if (btn) {
-                        btn.innerText = originalText;
-                        btn.disabled = false;
-                    }
+                });
+
+                // 動態從資料庫載入紅圈「！」標記
+                async function loadExclamationMarkers() {
+                    try {
+                        const res = await fetch('/api/spots/with_coords');
+                        const data = await res.json();
+                        if (data.status === "success" && data.spots) {
+                            const exclamationIcon = L.divIcon({
+                                className: 'custom-map-exclamation-icon',
+                                html: `<div style="background-color: #ef4444; color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); border: 2px solid white;">!</div>`,
+                                iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
+                            });
+
+                            data.spots.forEach(spot => {
+                                if (!spot.lat || !spot.lng) return;
+                                const marker = L.marker([spot.lat, spot.lng], { icon: exclamationIcon }).addTo(fishingMap);
+                                
+                                // 💡 修正點：不再將 bindPopup 寫在 click 裡面！初始化時先綁定好一個預設的載入 Popup
+                                marker.bindPopup(`<b>📍 ${spot.spot_name}</b><br><span style="color:#666;font-size:12px;">正在動態載入歷史漁獲照片...</span>`);
+                                
+                                // 💡 修正點：改用 popupopen 事件。這樣每次打開泡泡框，都會順暢觸發更新，解決隻能點一次的 Bug！
+                                marker.on('popupopen', async () => {
+                                    try {
+                                        const imgRes = await fetch(`/api/spots/${encodeURIComponent(spot.spot_name)}/images`);
+                                        const imgData = await imgRes.json();
+                                        let popupHtml = `<div style="max-width: 220px; padding: 2px; font-family: sans-serif;">
+                                            <h4 style="margin: 0 0 8px 0; color: #0077b6; font-size:14px; border-bottom: 1px solid #eee; padding-bottom: 4px;">📍 ${spot.spot_name}</h4>`;
+                                        if (imgData.status === "success" && imgData.images && imgData.images.length > 0) {
+                                            popupHtml += `<div style="max-height: 150px; overflow-y: auto; text-align: left;">`;
+                                            imgData.images.forEach(img => {
+                                                popupHtml += `
+                                                    <div style="display: inline-block; width: 90px; margin: 4px; border: 1px solid #e2e8f0; padding: 2px; border-radius: 4px; background: #fff; text-align:center; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                                                        <img src="${img.image_url}" style="width: 100%; height: 50px; object-fit: cover; border-radius: 2px;" alt="fish">
+                                                        <div style="font-size: 10px; font-weight: bold; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px;">${img.fish_type || '未知魚種'}</div>
+                                                    </div>`;
+                                            });
+                                            popupHtml += `</div>`;
+                                        } else {
+                                            popupHtml += `<p style="margin: 0; font-size: 12px; color: #94a3b8; text-align:center; padding: 8px 0;">此釣點尚無成功的漁獲辨識照片。</p>`;
+                                        }
+                                        popupHtml += `</div>`;
+                                        
+                                        // 動態刷新彈窗內的圖文清單
+                                        marker.setPopupContent(popupHtml);
+                                    } catch (err) {
+                                        marker.setPopupContent(`<b>📍 ${spot.spot_name}</b><br><span style="color:red;font-size:12px;">圖片載入異常</span>`);
+                                    }
+                                });
+                            });
+                        }
+                    } catch (err) { console.error("地圖載入標記失敗:", err); }
                 }
+                loadExclamationMarkers();
             });
         </script>
-    </body>
+	</body>
 </html>
