@@ -131,9 +131,8 @@ body {
 	justify-content: center;
 }
 
-/* 3. 副標題內文 */
 .intro-section p {
-    font-size: 14px;
+    font-size: 16px;
     color: #334155;
     line-height: 1.6;
     margin: 0;
@@ -184,7 +183,6 @@ body {
 	transition: transform 0.3s ease; /* 保留你設定的動畫過渡時間 */
 }
 
-/* 圖片按鈕專屬的 Hover 效果（滑鼠移過去稍微放大就好，不需要變色） */
 #require-LLM-button:hover {
 	transform: scale(1.1);
 	background-color: transparent;
