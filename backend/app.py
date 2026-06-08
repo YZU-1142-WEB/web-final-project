@@ -14,6 +14,7 @@ import requests
 import urllib3
 import traceback
 import time
+from werkzeug.security import generate_password_hash, check_password_hash
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 cwa_cache_data = None
@@ -105,7 +106,8 @@ def login():
             break
         if user_doc:
             user_data = user_doc.to_dict()
-            if user_data.get('password') == password:
+            stored_password_hash = user_data.get('password')
+            if check_password_hash(stored_password_hash, password):
                 session['username'] = user_data['username']
                 session['user_id'] = user_doc.id
                 return redirect(url_for('home'))
@@ -125,9 +127,10 @@ def register_page():
             existing_user = doc
             break
         if existing_user is None:
+            hashed_password = generate_password_hash(password)
             users_ref.add({
                 'username': username,
-                'password': password,
+                'password': hashed_password,
                 'created_at': firestore.SERVER_TIMESTAMP
             })
             flash("註冊成功，請登入！")
@@ -267,10 +270,11 @@ def validate_spot():
             return jsonify({"valid": False, "message": "LLM 驗證發生錯誤"})
     except Exception as e:
         return jsonify({"valid": False, "message": str(e)})
-    
+
 # ==========================================
 # 釣點座標儲存與讀取路由 (新增功能)
 # ==========================================
+
 
 @app.route('/api/spots/save', methods=['POST'])
 def save_spot_coords():
@@ -289,8 +293,9 @@ def save_spot_coords():
     try:
         spots_ref = db.collection('fishing_spots')
         # 檢查該使用者是否已建立過同名釣點，有則更新，無則新增
-        query = spots_ref.where('username', '==', session['username']).where('spot_name', '==', spot_name).limit(1).stream()
-        
+        query = spots_ref.where('username', '==', session['username']).where(
+            'spot_name', '==', spot_name).limit(1).stream()
+
         doc_id = None
         for doc in query:
             doc_id = doc.id
@@ -669,7 +674,8 @@ def delete_spot(spot_name):
     try:
         # 1. 刪除該釣點下的所有漁獲照片紀錄 (你原本寫好的部分)
         records_ref = db.collection('fish_records')
-        query = records_ref.where('username', '==', session['username']).where('spot_name', '==', spot_name).stream()
+        query = records_ref.where('username', '==', session['username']).where(
+            'spot_name', '==', spot_name).stream()
 
         deleted_count = 0
         for doc in query:
@@ -678,14 +684,15 @@ def delete_spot(spot_name):
 
         # 2. 💡【新加入的部分】同步刪除 fishing_spots 集合裡該釣點的經緯度座標紀錄
         spots_ref = db.collection('fishing_spots')
-        spots_query = spots_ref.where('username', '==', session['username']).where('spot_name', '==', spot_name).stream()
-        
+        spots_query = spots_ref.where('username', '==', session['username']).where(
+            'spot_name', '==', spot_name).stream()
+
         for doc in spots_query:
             doc.reference.delete()
             print(f"🗑️ 已成功同步清除地圖座標紀錄: {spot_name}")
 
         return jsonify({"status": "success", "message": f"已成功刪除釣點、座標及 {deleted_count} 張照片"})
-        
+
     except Exception as e:
         traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
