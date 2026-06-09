@@ -351,75 +351,111 @@ def get_spots_with_coords():
 # LLM 聊天室路由
 # ==========================================
 
+# 建立一個全域字典（看板），用來在記憶體中暫存所有 AI 任務的狀態與結果
 llm_tasks = {}
 
-
+# 定義路由：接收前端發送的非同步 AI 提問請求
 @app.route('/api/llm/ask', methods=['POST'])
 def ask_llm_async():
+    # 安全檢查：若 Session 中沒有使用者名稱，代表未登入，拒絕請求
     if 'username' not in session:
         return jsonify({"status": "error", "message": "請先登入"}), 401
 
+    # 解析前端傳來的 JSON 資料
     data = request.get_json()
+    # 從資料中取出使用者輸入的文字內容
     user_message = data.get('input_text')
 
+    # 驗證：如果使用者沒有輸入任何文字，回傳錯誤訊息
     if not user_message:
         return jsonify({"status": "error", "message": "請提供問題"}), 400
 
+    # 利用 UUID 隨機生成一個 8 位數的唯一任務識別碼（例如：llm_a1b2c3d4）
     task_id = f"llm_{uuid.uuid4().hex[:8]}"
+    # 在全域看板中登記此任務，並將狀態初始化為 "processing"（處理中）
     llm_tasks[task_id] = {"status": "processing"}
+    
 
+    # 重複讀取 Session 紀錄
     current_history = session.get('chat_history', [])
 
+    # 定義一個要在背景執行的工作副程式（Worker）
     def llm_worker(tid, msg, history_data):
         try:
+            # 呼叫封裝好的 Gemini 服務，帶入最新問題與歷史紀錄，向 Google API 發送請求
             result = llm_service.chat(msg, history=history_data)
 
+            # 如果 Gemini API 成功回傳結果
             if result.get("success"):
+                # 使用 markdown 套件將 AI 回傳的 Markdown 語法轉換為網頁 HTML 標籤
+                # extensions=['nl2br'] 會自動將文字中的換行符 '\n' 轉換為網頁的 <br> 標籤
                 html_reply = markdown.markdown(
                     result["reply"], extensions=['nl2br'])
+                # 將運算結果更新回全域看板中
                 llm_tasks[tid] = {
-                    "status": "completed",
-                    "question": msg,
-                    "reply": html_reply,
-                    "raw_reply": result["reply"]
+                    "status": "completed",       # 標記狀態為已完成
+                    "question": msg,              # 記錄當時提問的問題
+                    "reply": html_reply,          # 儲存轉換後的 HTML 格式回答（網頁顯示用）
+                    "raw_reply": result["reply"]  # 儲存未轉換的純文字回答（下次對話記憶用）
                 }
+            # 如果 Gemini API 內部判定失敗（例如觸發頻率限制）
             else:
                 llm_tasks[tid] = {"status": "failed",
                                   "error_message": result.get("error", "AI 發生錯誤")}
+        # 如果程式執行期間發生任何不可預期的例外錯誤（例如網路斷線）
         except Exception as e:
             llm_tasks[tid] = {"status": "failed", "error_message": str(e)}
 
+    # 建立一個獨立的多線程（Thread）物件，指定執行背景工作，並將參數傳入
     thread = threading.Thread(target=llm_worker, args=(
         task_id, user_message, current_history))
+    # 啟動背景執行緒（此時 llm_worker 開始默默執行，主程式不會卡住等待）
     thread.start()
+    # 主程式立刻秒回前端，告知任務已建立，並提供任務 ID 讓前端後續進行輪詢（Polling）
     return jsonify({"status": "success", "task_id": task_id, "message": "AI 正在思考中..."})
 
 
+# 定義路由：供前端 JavaScript 定時輪詢（查詢）任務的最新進度
 @app.route('/api/llm/check_task/<task_id>')
 def check_llm_task(task_id):
+    # 從全域看板中尋找該 ID 的任務資料，若找不到則回傳 "not_found" 的狀態
     task_data = llm_tasks.get(task_id, {"status": "not_found"})
 
+    # 檢查：如果 AI 已經運算完成，且該筆對話「尚未」儲存到使用者的 Session 紀錄中
     if task_data.get("status") == "completed" and not task_data.get("saved_to_session"):
+        # 取出使用者目前的歷史對話列表
         history = session.get('chat_history', [])
+
+        # 將這次的「使用者問題」加入歷史紀錄
         history.append({"role": "user", "content": task_data['question']})
-
+        # 將這次的「AI 純文字回答」加入歷史紀錄（因為下一次發送給 Gemini 時需要純文字）
         history.append(
-            {"role": "assistant", "content": task_data['raw_reply']})
+            {"role": "assistant", "content": task_data['raw_reply']}) 
 
+        # 將更新後的歷史紀錄寫回 Session 中
         session['chat_history'] = history
+        # 顯式通知 Flask 該 Session 的內部陣列已被修改，必須重新寫入 Cookie
         session.modified = True
+
+        # 在該任務看板打個記號，防止前端因連續輪詢而導致這筆對話被重複塞入歷史紀錄
         task_data["saved_to_session"] = True
 
+    # 回傳 JSON 格式的任務狀態與結果給前端
     return jsonify(task_data)
 
 
+# 定義路由：顯示傳統的 AI 結果獨立頁面（非 AJAX 局部更新時使用）
 @app.route('/api/llm/result/<task_id>')
 def llm_result_page(task_id):
+    # 從全域看板撈取任務資料
     result = llm_tasks.get(task_id)
+    # 如果找不到任務，或者任務根本還沒執行完畢，則強制重導向回首頁
     if not result or result['status'] != 'completed':
         return redirect(url_for('home'))
 
+    # 渲染 llm_result.html 模板，並將問題與轉好的 HTML 回覆帶入網頁中顯示
     return render_template('llm_result.html', question=result['question'], reply=result['reply'])
+
 
 # ==========================================
 # 圖片上傳與 AI 辨識路由
@@ -481,65 +517,91 @@ def upload_async():
             'created_at': firestore.SERVER_TIMESTAMP
         })
 
+        # 從 Firestore 文件中取得系統自動生成的唯一 ID（如：2Jk9xL4mNp），作為這次辨識的任務 ID
         task_id = doc_ref.id
 
+        # ==========================================
+        # 3. 啟動背景 AI 辨識任務
+        # ==========================================
+        # 定義要在背景獨立執行的 AI 辨識副程式（Worker）
         def ai_worker(tid, raw_bytes):
-            import traceback
+            import traceback # 匯入追蹤錯誤軌跡的套件
             print(f"🟢 [任務 {tid}] 背景執行緒啟動！")
 
             try:
+                # 綁定該任務在 Firestore 中對應的文件引用
                 record_ref = db.collection('fish_records').document(tid)
 
+                # 呼叫 AI 辨識核心函式（傳入圖片的二進位 Byte 資料進行圖像分析）
                 predictions = analyze_catch_image(raw_bytes)
                 print(f"🟢 [任務 {tid}] AI 分析完成，結果: {predictions}")
 
+                # 防呆機制 1：如果 AI 判定照片中根本「不是魚」
                 if predictions and predictions[0].get("is_fish") == False:
                     print(f"❌ [任務 {tid}] AI 判斷這張照片不是魚類")
+                    # 更新資料庫狀態為 'failed'，並註記錯誤原因
                     record_ref.update({
                         'status': 'failed',
                         'error_message': '❌ AI 判斷這張照片不是魚類，請上傳清晰的魚類照片！'
                     })
-                    return
+                    return # 結束背景任務
 
+                # 防呆機制 2：如果照片是魚，但判定「不是台灣本土會出現的魚種」
                 if predictions and predictions[0].get("is_TW_fish") == False:
                     print(f"❌ [任務 {tid}] AI 判斷這張照片不是台灣魚類")
+                    # 更新資料庫狀態為 'failed'，並註記錯誤原因
                     record_ref.update({
                         'status': 'failed',
                         'error_message': '❌ AI 判斷這張照片不是台灣常見魚類！'
                     })
-                    return
+                    return # 結束背景任務
 
+                # 如果成功拿到有效的 AI 辨識結果（代表是台灣魚類）
                 if predictions:
+                    # 取出精確度最高的第一筆（最佳匹配）預測結果
                     best_match = predictions[0]
+                    # 取出置信度分數（機率），並強制轉為浮點數
                     score = float(best_match.get('score', 0.0))
+                    # 取出辨識出的魚類中文名稱（若無則預設為未知魚種）
                     fish_type = best_match.get('name', '未知魚種')
+                    # 取出該魚類的介紹習性文字（若無則預設為無詳細介紹）
                     description = best_match.get('description', '無詳細介紹')
 
+                    # 將辨識完成的豐碩成果，全面更新回 Firestore 資料庫中
                     record_ref.update({
-                        'status': 'completed',
-                        'fish_type': fish_type,
-                        'confidence_score': round(score*100, 1),
-                        'description': description
+                        'status': 'completed',                     # 標記任務成功完成
+                        'fish_type': fish_type,                     # 寫入魚種名稱
+                        'confidence_score': round( score*100 , 1 ), # 將小數分數轉為百分比並四捨五入到小數第一位（例如 98.5）
+                        'description': description                  # 寫入習性介紹說明
                     })
+                    
+                # 如果 AI 回傳的資料結構是空的，查無結果
                 else:
                     print(f"❌ [任務 {tid}] AI 未回傳有效預測結果，已刪除紀錄")
                     record_ref.update({
                         'status': 'failed',
                         'error_message': 'AI 辨識失敗，未回傳有效結果，請重新上傳！'
                     })
+
+            # 捕捉背景 AI 分析時發生的任何系統崩潰或例外
             except Exception as e:
-                traceback.print_exc()
+                traceback.print_exc() # 在後端終端機詳細印出是哪一行出錯
                 try:
+                    # 嘗試將錯誤訊息更新回資料庫，好讓前端知道為什麼卡住
                     record_ref.update({
                         'status': 'failed',
                         'error_message': f"辨識發生系統錯誤: {str(e)}"
                     })
                 except Exception as inner_e:
+                    # 如果連網路都斷了、導致連失敗狀態都寫不進 Firestore，則在終端機噴警告
                     print(f"❌ [任務 {tid}] 連寫入失敗狀態都失敗了: {inner_e}")
 
+        # 建立一個獨立的背景執行緒，指定執行 ai_worker，並把任務 ID 與圖片原始 Byte 資料傳進去
         thread = threading.Thread(target=ai_worker, args=(task_id, img_bytes))
+        # 啟動背景執行緒，AI 辨識在背景開始跑，主執行緒解放
         thread.start()
 
+        # 主程式秒回 JSON 給前端，告知圖片已成功處理，並把任務 ID（Firestore 的 Doc ID）發給前端
         return jsonify({
             "status": "success",
             "task_id": task_id,
@@ -547,47 +609,65 @@ def upload_async():
         })
 
 
+# 定義路由：供前端 JavaScript 拿著 task_id 定時輪詢進度
 @app.route('/api/picture/check_task/<task_id>')
 def check_task(task_id):
+    # 指向 Firestore 中該筆任務的文件
     doc_ref = db.collection('fish_records').document(task_id)
+    # 從資料庫抓取最新資料
     doc = doc_ref.get()
-
+    
+    # 安全檢查：如果在資料庫找不到這個 ID，回傳 not_found
     if not doc.exists:
         return jsonify({"status": "not_found"})
-
+    
+    # 將文件資料轉為 Python 字典格式
     record = doc.to_dict()
+    # 取出目前的辨識狀態（processing / completed / failed）
     status = record.get('status')
 
+    # 【重要邏輯】如果 AI 判定失敗（不是魚、系統錯等）
     if status == 'failed':
+        # 撈出剛剛在背景註記的親切錯誤提示
         error_msg = record.get('error_message', '辨識過程發生錯誤')
+        # 為了節省空間，把這筆失敗的暫存紀錄從資料庫中徹底刪除（Delete）
         doc_ref.delete()
 
+        # 回傳失敗狀態與原因給前端，前端收到後通常會彈出警告（Alert）視窗告知使用者
         return jsonify({
             "status": "failed",
             "error_message": error_msg
         })
 
+    # 如果狀態是 processing（還在算）或 completed（算完了），就直接回傳狀態與魚種名稱
     return jsonify({
         "status": status,
         "fish_name": record.get('fish_type')
     })
 
 
+# 定義路由：當前端發現狀態是 completed，就會跳轉到這個獨立網頁顯示辨識結果
 @app.route('/api/picture/result/<task_id>')
 def result_page(task_id):
+    # 去資料庫撈取這筆任務的文件
     doc = db.collection('fish_records').document(task_id).get()
 
+    # 安全檢查：若文件不存在，直接強制重導向回首頁
     if not doc.exists:
         return redirect(url_for('home'))
-
+    
+    # 轉成字典
     record = doc.to_dict()
+    # 安全檢查：如果這個任務根本還沒辨識成功，不允許看結果，踢回首頁
     if record.get('status') != 'completed':
         return redirect(url_for('home'))
+        
+    # 通過所有檢查後，載入 HTML 模板 'result.html'，並把資料庫裡的所有辨識資料渲染到網頁上
     return render_template('result.html',
-                           img_file=record.get('image_url'),
-                           fish_name=record.get('fish_type'),
-                           confidence=record.get('confidence_score', '無資料'),
-                           description=record.get('description'))
+                           img_file=record.get('image_url'),          # 顯示 ImgBB 的圖片
+                           fish_name=record.get('fish_type'),         # 顯示魚的名字
+                           confidence=record.get('confidence_score', '無資料'), # 顯示 AI 信心度
+                           description=record.get('description'))     # 顯示魚類詳細介紹說明
 
 
 @app.route('/api/spots/<spot_name>/images', methods=['GET'])
