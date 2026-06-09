@@ -174,56 +174,88 @@
 	}
 
 	// 這個函數會一直去問後端：「好了沒？」
-	async function checkTaskStatus(taskId, btn, originalText, statusText) {
-		try {
-			const response = await fetch(
-				`/api/picture/check_task/${taskId}?t=${new Date().getTime()}`,
-			);
-			const data = await response.json();
+// 宣告一個非同步函數，接收四個參數：任務ID (taskId)、按鈕元素 (btn)、按鈕原始文字 (originalText)、狀態顯示文字元素 (statusText)
+async function checkTaskStatus(taskId, btn, originalText, statusText) {
+    try {
+        // 使用 fetch 發送 API 請求到後端，查詢該 taskId 的最新狀態
+        // 網址後方加上 `?t=${new Date().getTime()}` 是為了加上時間戳記，防止瀏覽器快取拿到舊資料
+        const response = await fetch(
+            `/api/picture/check_task/${taskId}?t=${new Date().getTime()}`,
+        );
+        
+        // 將後端回傳的 Response 解析為 JSON 格式的資料
+        const data = await response.json();
 
-			if (data.status === "completed") {
-				localStorage.removeItem("fish_task_id");
-				statusText.innerText = "🎉 辨識完成！準備跳轉...";
-				window.location.href = `/api/picture/result/${taskId}`;
-			} else if (data.status === "failed") {
-				localStorage.removeItem("fish_task_id");
-				alert("辨識失敗：" + data.error_message);
-				btn.innerText = originalText;
-				btn.disabled = false;
-				statusText.style.display = "none";
-			} else if (data.status === "not_found") {
-				localStorage.removeItem("fish_task_id");
-				btn.innerText = originalText;
-				btn.disabled = false;
-				statusText.style.display = "none";
-			} else if (
-				data.status === "not_fish" ||
-				data.status === "not_TW_fish"
-			) {
-				localStorage.removeItem("fish_task_id");
-				const errorMsg =
-					data.status === "not_fish"
-						? "❌ 上傳失敗：請上傳魚的照片！"
-						: "❌ 上傳失敗：請上傳台灣可釣到的魚種照片！";
-				alert(errorMsg);
-				btn.innerText = originalText;
-				btn.disabled = false;
-				statusText.style.display = "none";
-				document.getElementById("fileInput").value = "";
-			} else {
-				statusText.innerText += " .";
-				setTimeout(
-					() =>
-						checkTaskStatus(taskId, btn, originalText, statusText),
-					1000,
-				);
-			}
-		} catch (error) {
-			btn.innerText = originalText;
-			btn.disabled = false;
-			statusText.style.display = "none";
-		}
-	}
+        // 判斷回傳資料中的狀態：如果任務狀態是 "completed"（已完成）
+        if (data.status === "completed") {
+            // 既然完成了，就清除存在瀏覽器 LocalStorage 中的任務 ID 紀錄
+            localStorage.removeItem("fish_task_id");
+            // 更新畫面上的狀態文字，提示使用者即將跳轉
+            statusText.innerText = "🎉 辨識完成！準備跳轉...";
+            // 將當前網頁重新導向到該任務的結果呈現頁面
+            window.location.href = `/api/picture/result/${taskId}`;
+            
+        // 如果任務狀態是 "failed"（失敗）
+        } else if (data.status === "failed") {
+            // 一樣先清除 LocalStorage 中的任務 ID 紀錄
+            localStorage.removeItem("fish_task_id");
+            // 跳出警告視窗，並附上後端回傳的錯誤原因
+            alert("辨識失敗：" + data.error_message);
+
+            // 恢復按鈕的原始文字（例如從「處理中...」變回「開始辨識」）
+            btn.innerText = originalText;
+            // 重新啟用按鈕，讓使用者可以再次點擊
+            btn.disabled = false;
+            // 隱藏狀態提示文字
+            statusText.style.display = "none";
+
+            // 清空檔案上傳欄位，方便使用者重新選擇圖片
+            document.getElementById("fileInput").value = "";
+            
+            // 以下四行負責重置圖片預覽區塊：
+            const spotPreview = document.getElementById("spot-preview"); // 取得預覽圖片的元素
+            const previewPlaceholder = document.getElementById("preview-placeholder"); // 取得尚未上傳圖片時的佔位符元素
+            if (spotPreview) spotPreview.style.display = "none"; // 隱藏預覽圖
+            if (previewPlaceholder) previewPlaceholder.style.display = "block"; // 顯示佔位符
+
+        // 如果任務狀態是 "not_found"（找不到任務資料）
+        } else if (data.status === "not_found") {
+            // 清除 LocalStorage 中的任務 ID 紀錄
+            localStorage.removeItem("fish_task_id");
+            // 跳出警告視窗，提示使用者任務異常
+            alert("❌ 找不到該筆任務，可能已被系統清除！");
+            
+            // 重置 UI 狀態：恢復按鈕文字、啟用按鈕、隱藏狀態文字
+            btn.innerText = originalText;
+            btn.disabled = false;
+            statusText.style.display = "none";
+            
+        // 如果狀態不是 completed、failed、也不是 not_found（代表任務還在「處理中」）
+        } else {
+            // 在畫面的狀態文字後面加上一個點，製造「處理中...」的視覺進度感
+            statusText.innerText += " .";
+            // 設定計時器，等待 1000 毫秒（1秒）後，再次呼叫自己（遞迴）去問後端「好了沒？」
+            setTimeout(
+                () =>
+                    checkTaskStatus(taskId, btn, originalText, statusText),
+                1000,
+            );
+        }
+        
+    // 捕捉在 try 區塊中發生的任何預期外錯誤（例如網路斷線、後端沒回傳合法的 JSON 等）
+    } catch (error) {
+        // 在瀏覽器開發者工具 (F12) 的 Console 印出詳細錯誤，方便工程師除錯
+        console.error("前端程式發生錯誤:", error);
+        // 跳出警告視窗告知使用者發生程式執行錯誤，並顯示錯誤訊息
+        alert("程式執行錯誤，請按 F12 查看 Console！\n錯誤詳情：" + error.message);
+        
+        // 發生錯誤後，也要將 UI 恢復到可以重新操作的狀態
+        btn.innerText = originalText;
+        btn.disabled = false;
+        statusText.style.display = "none";
+    }
+}
+
 </script>
 
 <script>

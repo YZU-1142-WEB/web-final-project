@@ -29,21 +29,6 @@ class GeminiService:
             "5. 語氣要專業且像一位資深的釣客前輩。"
         )
 
-    '''
-    def chat(self, prompt: str):
-        try:
-            # 新版發送請求的寫法
-            response = self.client.models.generate_content(
-                model=self.model_name,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    system_instruction=self.system_instruction
-                )
-            )
-            return {"success": True, "reply": response.text}
-        except Exception as e:
-            return {"success": False, "error": str(e)}
-    '''
 
     def chat(self, prompt: str, history=None):
         if history is None:

@@ -184,7 +184,7 @@
 			<script src="{{ url_for('static', filename='script.js') }}"></script>
 
 			<script>
-				function checkAiTaskStatus() {
+				function homeclock() {
 					// 從瀏覽器記憶體取出任務 ID
 					const taskId = localStorage.getItem("fish_task_id");
 
@@ -222,7 +222,7 @@
 				// 當首頁載入完成時立刻執行檢查
 				document.addEventListener(
 					"DOMContentLoaded",
-					checkAiTaskStatus,
+					homeclock,
 				);
 			</script>
 
