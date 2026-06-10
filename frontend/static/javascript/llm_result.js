@@ -22,7 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!text) return;
 
         // 1. 禁用輸入框，避免重複送出
-        inputField.value = "";
+        inputField.value = "";   
         inputField.disabled = true;
         inputBtn.disabled = true;
         inputBtn.innerText = "思考中...";
@@ -60,7 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
             // 判斷後端是否成功建立任務
             if (response.ok && data.status === "success") {
                 const taskId = data.task_id;
-                
+
                 // 5. 啟動輪詢機制，每 2 秒檢查一次進度
                 const checkInterval = setInterval(async () => {
                     try {
@@ -71,18 +71,14 @@ document.addEventListener("DOMContentLoaded", () => {
                             clearInterval(checkInterval); // 停止輪詢
                             document.getElementById(loadingId).remove(); // 移除「思考中」
 
-                            // 把 AI 的「新回答」加到畫面上
-                            const newAnswerHtml = `
-                                <div class="answer-box">
-                                    <strong> AI 的回答：</strong>
-                                    <div style="margin-top: 10px;">${taskData.reply}</div>
-                                </div>
-                            `;
+                            // 把 AI 的「新回答」加到畫面上（fallback: 將 \n 轉為 <br>）
+                            const safeReply = (taskData.reply || '').replace(/\n/g, '<br>');
+                            const newAnswerHtml = `<div class="answer-box"><strong> AI 的回答：</strong><div style="margin-top: 10px;">${safeReply}</div></div>`;
                             chatContainer.insertAdjacentHTML("beforeend", newAnswerHtml);
-                            
+
                             // 任務完成，恢復輸入框
                             restoreInputState();
-                            
+
                         } else if (taskData.status === "failed") {
                             clearInterval(checkInterval);
                             document.getElementById(loadingId).remove();

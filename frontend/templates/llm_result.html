@@ -1,50 +1,43 @@
 <!doctype html>
 <html lang="zh-Hant">
-    <head>
-        <meta charset="UTF-8" />
-        <title>AI 回答結果</title>
-        <link
-            rel="stylesheet"
-            href="{{ url_for('static', filename='styles/llm_result.css') }}"
-        />
-    </head>
-    <body>
-        <div class="card">
-            <h2>✨ AI 回答完畢！</h2>
 
-            <div id="chat-container">
-                <div class="question-box">
-                    你的問題：<br />
-                    <span
-                        style="
+<head>
+    <meta charset="UTF-8" />
+    <title>AI 回答結果</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/llm_result.css') }}" />
+</head>
+
+<body class="llm-result-bg">
+    <div class="card">
+        <h2>✨ AI 回答完畢！</h2>
+
+        <div id="chat-container">
+            <div class="question-box">
+                你的問題：<br />
+                <span style="
                             color: #333;
                             font-weight: normal;
                             display: inline-block;
                             margin-top: 5px;
-                        "
-                        >{{ question }}</span
-                    >
-                </div>
-
-                <div class="answer-box">
-                    <strong> AI 的回答：</strong>
-                    <div style="margin-top: 10px">{{ reply | safe }}</div>
-                </div>
+                        ">{{ question }}</span>
             </div>
 
-            <div class="last_asking">
-                <input
-                    id="middle-input"
-                    type="text"
-                    placeholder="繼續追問 AI..."
-                />
-                <button id="require-LLM-button">傳送</button>
+            <div class="answer-box">
+                <strong> AI 的回答：</strong>
+                <div style="margin-top: 10px">{{ reply | safe }}</div>
             </div>
-
-            <br />
-            <a href="/" class="back-btn">回到主畫面</a>
         </div>
 
-        <script src="{{ url_for('static', filename='javascript/llm_result.js') }}"></script>
-    </body>
+        <div class="last_asking">
+            <input id="middle-input" type="text" placeholder="繼續追問 AI..." />
+            <button id="require-LLM-button">傳送</button>
+        </div>
+
+        <br />
+        <a href="/" class="back-btn">回到主畫面</a>
+    </div>
+
+    <script src="{{ url_for('static', filename='javascript/llm_result.js') }}"></script>
+</body>
+
 </html>
