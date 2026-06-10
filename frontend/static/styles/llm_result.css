@@ -1,90 +1,214 @@
+/* ==========================================
+   顏色變數與全域基礎設定 (海洋風主題)
+========================================== */
+:root {
+	--primary-blue: #0077b6; /* 主題藍 */
+	--dark-blue: #023e8a; /* 深海藍 (Hover) */
+	--secondary-blue: #00b4d8; /* 次要元素 */
+	--light-blue: #f0f8ff; /* 輕透天藍 (狀態背景) */
+	--accent-orange: #f77f00; /* 醒目橘色 */
+	--accent-green: #06a77d; /* 成功綠 */
+	--bg-color: #f4f7fa; /* 柔和的灰藍色背景 */
+	--card-bg: #ffffff; /* 卡片純白背景 */
+	--text-main: #2b2d42; /* 深色文字 */
+	--text-muted: #64748b;
+	--border-radius: 16px;
+	--shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.08);
+	--shadow-md: 0 8px 24px rgba(0, 119, 182, 0.12);
+	--spacing-sm: 8px;
+	--spacing-md: 16px;
+	--spacing-lg: 24px;
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+}
+
 body {
-	background-color: #e0f7fa;
+	font-family:
+		"Noto Sans TC", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+	background-color: var(--bg-color);
+	color: var(--text-main);
 	display: flex;
 	justify-content: center;
 	align-items: center;
 	min-height: 100vh;
-	font-family: sans-serif;
-	margin: 0;
+	padding: var(--spacing-md);
+	line-height: 1.6;
 }
+
+/* ==========================================
+   主卡片容器
+========================================== */
 .card {
-	background: white;
-	padding: 2rem;
-	border-radius: 15px;
+	background: rgba(255, 255, 255, 0.95);
+	backdrop-filter: blur(10px);
+	padding: var(--spacing-lg) 2rem;
+	border-radius: var(--border-radius);
 	text-align: center;
-	width: 80%;
-	max-width: 600px;
-	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+	width: 100%;
+	max-width: 700px;
+	box-shadow: var(--shadow-md);
+	border: 1px solid rgba(226, 232, 240, 0.6);
+	transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
+
+.card:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 12px 32px rgba(0, 119, 182, 0.15);
+}
+
+/* ==========================================
+   問題框
+========================================== */
 .question-box {
-	margin-top: 10px;
-	padding: 15px;
-	background-color: #e3f2fd;
-	border-radius: 10px;
+	margin-top: var(--spacing-lg);
+	padding: var(--spacing-lg);
+	background: linear-gradient(135deg, var(--light-blue) 0%, #e0f4ff 100%);
+	border-radius: var(--border-radius);
 	text-align: left;
-	color: #1565c0;
-	font-weight: bold;
+	color: var(--primary-blue);
+	font-weight: 600;
 	font-size: 1.1rem;
+	border-left: 4px solid var(--primary-blue);
+	transition: all 0.2s ease;
 }
+
+.question-box:hover {
+	background: linear-gradient(135deg, #d6eef9 0%, #c8ebff 100%);
+	box-shadow: 0 4px 12px rgba(0, 119, 182, 0.15);
+}
+
+/* ==========================================
+   回答框
+========================================== */
 .answer-box {
-	margin-top: 20px;
-	padding: 20px;
-	background-color: #f1f8e9;
-	border-radius: 10px;
+	margin-top: var(--spacing-lg);
+	padding: var(--spacing-lg);
+	background: linear-gradient(135deg, #f0fdf4 0%, #f1f8e9 100%);
+	border-radius: var(--border-radius);
 	text-align: left;
-	color: #424242;
+	color: var(--text-main);
 	line-height: 1.8;
-	border-left: 5px solid #8bc34a;
+	border-left: 4px solid var(--accent-green);
 	font-size: 1rem;
-	white-space: pre-wrap; /* 讓 AI 的換行能正常顯示 */
+	white-space: pre-wrap;
+	box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+	transition: all 0.2s ease;
 }
-.back-btn {
-	display: inline-block;
-	margin-top: 25px;
-	padding: 10px 20px;
-	background-color: #00acc1;
-	color: white;
-	text-decoration: none;
-	border-radius: 20px;
-	font-weight: bold;
-	transition: 0.3s;
+
+.answer-box:hover {
+	background: linear-gradient(135deg, #ecfdf5 0%, #e8f5e9 100%);
+	box-shadow: inset 0 2px 8px rgba(6, 168, 125, 0.1);
 }
-.back-btn:hover {
-	background-color: #00838f;
+
+/* ==========================================
+   思考框
+========================================== */
+.thinking-box {
+	margin-top: var(--spacing-lg);
+	padding: var(--spacing-md) var(--spacing-lg);
+	color: var(--secondary-blue);
+	font-style: italic;
+	text-align: center;
+	background-color: rgba(0, 180, 216, 0.08);
+	border-radius: 12px;
+	font-size: 0.95rem;
+	animation: pulse 2s ease-in-out infinite;
 }
-/* 這是新增的下層輸入框樣式 */
+
+@keyframes pulse {
+	0%, 100% {
+		opacity: 0.8;
+	}
+	50% {
+		opacity: 1;
+	}
+}
+
+/* ==========================================
+   輸入框容器 (下層詢問)
+========================================== */
 .last_asking {
 	display: flex;
-	margin-top: 30px;
-	background-color: #f5f5f5;
+	margin-top: var(--spacing-lg);
+	background-color: var(--light-blue);
 	border-radius: 30px;
-	padding: 5px 15px;
-	box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+	padding: 8px 20px;
+	gap: var(--spacing-sm);
+	box-shadow: inset 0 2px 8px rgba(0, 119, 182, 0.08);
+	border: 1px solid rgba(0, 119, 182, 0.2);
+	align-items: center;
+	transition: all 0.2s ease;
 }
+
+.last_asking:focus-within {
+	box-shadow: inset 0 2px 8px rgba(0, 119, 182, 0.15), 0 0 0 3px rgba(0, 119, 182, 0.1);
+}
+
 #middle-input {
 	flex-grow: 1;
 	border: none;
 	outline: none;
 	background: transparent;
-	padding: 10px;
+	padding: 12px 8px;
 	font-size: 1rem;
+	color: var(--text-main);
+	font-family: inherit;
 }
+
+#middle-input::placeholder {
+	color: var(--text-muted);
+}
+
+/* ==========================================
+   按鈕樣式
+========================================== */
+.back-btn,
 #require-LLM-button {
-	background-color: #00acc1;
+	background-color: var(--primary-blue);
 	color: white;
 	border: none;
-	border-radius: 20px;
-	padding: 8px 20px;
+	border-radius: 25px;
+	padding: 12px 28px;
+	font-weight: 600;
 	cursor: pointer;
-	font-weight: bold;
-	transition: 0.3s;
+	font-size: 1rem;
+	transition: all 0.3s ease;
+	box-shadow: 0 4px 12px rgba(0, 119, 182, 0.25);
+	text-decoration: none;
+	display: inline-block;
 }
+
+.back-btn:hover,
 #require-LLM-button:hover {
-	background-color: #00838f;
+	background-color: var(--dark-blue);
+	box-shadow: 0 6px 20px rgba(0, 119, 182, 0.4);
+	transform: translateY(-2px);
 }
-.thinking-box {
-	margin-top: 20px;
-	color: #00acc1;
-	font-style: italic;
-	text-align: center;
+
+.back-btn:active,
+#require-LLM-button:active {
+	transform: translateY(0);
+	box-shadow: 0 2px 8px rgba(0, 119, 182, 0.3);
+}
+
+.back-btn {
+	margin-top: var(--spacing-lg);
+}
+
+#require-LLM-button {
+	margin: 0;
+	padding: 10px 24px;
+	font-size: 0.95rem;
+	background-color: var(--secondary-blue);
+	flex-shrink: 0;
+}
+
+#require-LLM-button:hover {
+	background-color: var(--primary-blue);
 }
