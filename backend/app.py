@@ -1,3 +1,4 @@
+import io
 import os
 import threading
 import uuid
@@ -15,6 +16,7 @@ import urllib3
 import traceback
 import time
 from werkzeug.security import generate_password_hash, check_password_hash
+from PIL import Image
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 cwa_cache_data = None
@@ -355,6 +357,8 @@ def get_spots_with_coords():
 llm_tasks = {}
 
 # 定義路由：接收前端發送的非同步 AI 提問請求
+
+
 @app.route('/api/llm/ask', methods=['POST'])
 def ask_llm_async():
     # 安全檢查：若 Session 中沒有使用者名稱，代表未登入，拒絕請求
@@ -374,7 +378,6 @@ def ask_llm_async():
     task_id = f"llm_{uuid.uuid4().hex[:8]}"
     # 在全域看板中登記此任務，並將狀態初始化為 "processing"（處理中）
     llm_tasks[task_id] = {"status": "processing"}
-    
 
     # 重複讀取 Session 紀錄
     current_history = session.get('chat_history', [])
@@ -430,7 +433,7 @@ def check_llm_task(task_id):
         history.append({"role": "user", "content": task_data['question']})
         # 將這次的「AI 純文字回答」加入歷史紀錄（因為下一次發送給 Gemini 時需要純文字）
         history.append(
-            {"role": "assistant", "content": task_data['raw_reply']}) 
+            {"role": "assistant", "content": task_data['raw_reply']})
 
         # 將更新後的歷史紀錄寫回 Session 中
         session['chat_history'] = history
@@ -475,6 +478,11 @@ def upload_async():
 
     if file:
         img_bytes = file.read()
+        img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+        img.thumbnail((1600, 1600))
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=85)
+        img_bytes = buf.getvalue()
         spot_name = request.form.get('spot_name', '未知釣點')
 
         try:
@@ -490,11 +498,18 @@ def upload_async():
                 "https://api.imgbb.com/1/upload",
                 data={
                     "key": IMGBB_API_KEY,
-                    "image": b64_img
-                }
+                    "image": b64_img,
+                },
+                timeout=30,
             )
+            print("ImgBB status:", response.status_code)
+            print("ImgBB body:", response.text[:500])
 
-            response_data = response.json()
+            try:
+                response_data = response.json()
+            except ValueError:
+                return jsonify({"status": "error",
+                                "message": f"圖床回應異常 (HTTP {response.status_code})"}), 502
 
             if response.status_code == 200:
                 img_url = response_data['data']['url']
@@ -525,7 +540,7 @@ def upload_async():
         # ==========================================
         # 定義要在背景獨立執行的 AI 辨識副程式（Worker）
         def ai_worker(tid, raw_bytes):
-            import traceback # 匯入追蹤錯誤軌跡的套件
+            import traceback  # 匯入追蹤錯誤軌跡的套件
             print(f"🟢 [任務 {tid}] 背景執行緒啟動！")
 
             try:
@@ -544,7 +559,7 @@ def upload_async():
                         'status': 'failed',
                         'error_message': '❌ AI 判斷這張照片不是魚類，請上傳清晰的魚類照片！'
                     })
-                    return # 結束背景任務
+                    return  # 結束背景任務
 
                 # 防呆機制 2：如果照片是魚，但判定「不是台灣本土會出現的魚種」
                 if predictions and predictions[0].get("is_TW_fish") == False:
@@ -554,7 +569,7 @@ def upload_async():
                         'status': 'failed',
                         'error_message': '❌ AI 判斷這張照片不是台灣常見魚類！'
                     })
-                    return # 結束背景任務
+                    return  # 結束背景任務
 
                 # 如果成功拿到有效的 AI 辨識結果（代表是台灣魚類）
                 if predictions:
@@ -571,10 +586,11 @@ def upload_async():
                     record_ref.update({
                         'status': 'completed',                     # 標記任務成功完成
                         'fish_type': fish_type,                     # 寫入魚種名稱
-                        'confidence_score': round( score*100 , 1 ), # 將小數分數轉為百分比並四捨五入到小數第一位（例如 98.5）
+                        # 將小數分數轉為百分比並四捨五入到小數第一位（例如 98.5）
+                        'confidence_score': round(score*100, 1),
                         'description': description                  # 寫入習性介紹說明
                     })
-                    
+
                 # 如果 AI 回傳的資料結構是空的，查無結果
                 else:
                     print(f"❌ [任務 {tid}] AI 未回傳有效預測結果，已刪除紀錄")
@@ -585,7 +601,7 @@ def upload_async():
 
             # 捕捉背景 AI 分析時發生的任何系統崩潰或例外
             except Exception as e:
-                traceback.print_exc() # 在後端終端機詳細印出是哪一行出錯
+                traceback.print_exc()  # 在後端終端機詳細印出是哪一行出錯
                 try:
                     # 嘗試將錯誤訊息更新回資料庫，好讓前端知道為什麼卡住
                     record_ref.update({
@@ -616,11 +632,11 @@ def check_task(task_id):
     doc_ref = db.collection('fish_records').document(task_id)
     # 從資料庫抓取最新資料
     doc = doc_ref.get()
-    
+
     # 安全檢查：如果在資料庫找不到這個 ID，回傳 not_found
     if not doc.exists:
         return jsonify({"status": "not_found"})
-    
+
     # 將文件資料轉為 Python 字典格式
     record = doc.to_dict()
     # 取出目前的辨識狀態（processing / completed / failed）
@@ -655,18 +671,20 @@ def result_page(task_id):
     # 安全檢查：若文件不存在，直接強制重導向回首頁
     if not doc.exists:
         return redirect(url_for('home'))
-    
+
     # 轉成字典
     record = doc.to_dict()
     # 安全檢查：如果這個任務根本還沒辨識成功，不允許看結果，踢回首頁
     if record.get('status') != 'completed':
         return redirect(url_for('home'))
-        
+
     # 通過所有檢查後，載入 HTML 模板 'result.html'，並把資料庫裡的所有辨識資料渲染到網頁上
     return render_template('result.html',
-                           img_file=record.get('image_url'),          # 顯示 ImgBB 的圖片
+                           # 顯示 ImgBB 的圖片
+                           img_file=record.get('image_url'),
                            fish_name=record.get('fish_type'),         # 顯示魚的名字
-                           confidence=record.get('confidence_score', '無資料'), # 顯示 AI 信心度
+                           confidence=record.get(
+                               'confidence_score', '無資料'),  # 顯示 AI 信心度
                            description=record.get('description'))     # 顯示魚類詳細介紹說明
 
 
@@ -781,4 +799,4 @@ def delete_spot(spot_name):
 if __name__ == '__main__':
     print("✅ 啟動 Flask 伺服器...")
     port = int(os.environ.get("PORT", 7860))
-    app.run(host='0.0.0.0', port=port, debug=is_local)
+    app.run(port=port, debug=is_local)
